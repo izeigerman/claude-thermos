@@ -17,9 +17,18 @@ def test_double_dash_splits_passthrough():
     assert passthrough == ["chat", "--model", "x"]
 
 
-def test_main_surfaces_passthrough_without_error(capsys):
+def test_main_delegates_to_run_launcher(monkeypatch):
+    captured = {}
+
+    def fake_run_launcher(config, passthrough):
+        captured["config"] = config
+        captured["passthrough"] = passthrough
+        return 5
+
+    monkeypatch.setattr("claude_warmer.cli.run_launcher", fake_run_launcher)
+
     exit_code = main(["--idle", "300", "--", "chat", "--model", "x"])
-    assert exit_code == 0
-    captured = capsys.readouterr()
-    assert "chat" in captured.out
-    assert "--model" in captured.out
+
+    assert exit_code == 5
+    assert captured["config"].idle_threshold_sec == 300
+    assert captured["passthrough"] == ["chat", "--model", "x"]

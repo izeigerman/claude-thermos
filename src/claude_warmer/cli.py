@@ -1,6 +1,7 @@
 import os
 
 from claude_warmer.config import load_config, split_passthrough
+from claude_warmer.launcher import run_launcher
 
 __all__ = ["main", "split_passthrough"]
 
@@ -15,7 +16,4 @@ def main(argv: list[str] | None = None) -> int:
 
     config, passthrough = load_config(argv, os.environ)
 
-    print(f"config={config}")
-    print(f"passthrough={passthrough}")
-
-    return 0
+    return run_launcher(config, passthrough)
