@@ -40,3 +40,20 @@ def test_flag_env_precedence_and_passthrough(monkeypatch):
 
     assert result.exit_code == 0
     assert captured["config"].idle_threshold_sec == 300
+
+
+def test_passthrough_without_double_dash(monkeypatch):
+    captured = {}
+
+    def recorder(config, claude_args):
+        captured["config"] = config
+        captured["claude_args"] = claude_args
+        return 0
+
+    monkeypatch.setattr("claude_warmer.cli.run_launcher", recorder)
+
+    result = CliRunner().invoke(main, ["chat", "-p", "hi"])
+
+    assert result.exit_code == 0
+    assert captured["claude_args"] == ["chat", "-p", "hi"]
+    assert captured["config"].idle_threshold_sec == 270
