@@ -24,8 +24,26 @@ target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = [
+    "F401",
+    "F811",
+    "RET505",
+    "T100",
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ANN205",
+    "ANN206",
+]
+extend-select = ["TID"]
 
-[tool.ty.environment]
-python-version = "3.11"
-root = ["src"]
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ty.rules]
+unused-ignore-comment = "warn"

@@ -10,7 +10,7 @@ lint:
 	uv run ruff check . --fix
 
 format:
-	uv run ruff format . --line-length 100
+	uv run ruff format .
 
 typecheck:
 	uv run ty check
