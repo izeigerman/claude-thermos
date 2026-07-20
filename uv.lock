@@ -409,6 +409,7 @@ name = "claude-warmer"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
     { name = "mitmproxy", version = "11.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "mitmproxy", version = "12.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
@@ -422,6 +423,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click" },
     { name = "mitmproxy" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },

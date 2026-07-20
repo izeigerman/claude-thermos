@@ -1,32 +1,42 @@
-import pytest
+from click.testing import CliRunner
 
-from claude_warmer.cli import main, split_passthrough
-
-
-def test_main_help_exits_zero():
-    with pytest.raises(SystemExit) as exc_info:
-        main(["--help"])
-    assert exc_info.value.code == 0
+from claude_warmer.cli import main
 
 
-def test_double_dash_splits_passthrough():
-    known, passthrough = split_passthrough(["--idle", "300", "--", "chat", "--model", "x"])
-    assert known == ["--idle", "300"]
-    assert passthrough == ["chat", "--model", "x"]
+def test_help_exits_zero():
+    result = CliRunner().invoke(main, ["--help"])
+    assert result.exit_code == 0
 
 
-def test_main_delegates_to_run_launcher(monkeypatch):
+def test_bad_max_cycles_reports_error():
+    result = CliRunner().invoke(main, ["-n", "-1"])
+    assert result.exit_code != 0
+    assert 'max-cycles must be a non-negative integer or "auto"' in result.output
+
+
+def test_flag_env_precedence_and_passthrough(monkeypatch):
     captured = {}
 
-    def fake_run_launcher(config, passthrough):
+    def recorder(config, claude_args):
         captured["config"] = config
-        captured["passthrough"] = passthrough
-        return 5
+        captured["claude_args"] = claude_args
+        return 0
 
-    monkeypatch.setattr("claude_warmer.cli.run_launcher", fake_run_launcher)
+    monkeypatch.setattr("claude_warmer.cli.run_launcher", recorder)
 
-    exit_code = main(["--idle", "300", "--", "chat", "--model", "x"])
+    result = CliRunner().invoke(
+        main,
+        ["--idle", "400", "--interval", "999", "--", "chat", "-p", "hi"],
+        env={"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"},
+    )
 
-    assert exit_code == 5
+    assert result.exit_code == 0
+    assert captured["config"].idle_threshold_sec == 400
+    assert captured["config"].warm_interval_sec == 999
+    assert captured["config"].subagent_active_window_sec == 540
+    assert captured["claude_args"] == ["chat", "-p", "hi"]
+
+    result = CliRunner().invoke(main, [], env={"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
+
+    assert result.exit_code == 0
     assert captured["config"].idle_threshold_sec == 300
-    assert captured["passthrough"] == ["chat", "--model", "x"]

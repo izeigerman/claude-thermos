@@ -7,7 +7,7 @@ name = "claude-warmer"
 version = "0.1.0"
 description = "Launcher that wraps Claude Code with a local reverse proxy to keep its prompt cache warm."
 requires-python = ">=3.11"
-dependencies = ["mitmproxy"]
+dependencies = ["mitmproxy", "click"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "ty"]

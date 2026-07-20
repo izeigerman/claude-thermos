@@ -1,10 +1,10 @@
 import pytest
 
-from claude_warmer.config import Config, load_config
+from claude_warmer.config import Config, build_config
 
 
-def test_defaults():
-    config, passthrough = load_config([], {})
+def test_build_config_defaults():
+    config = build_config(270, 270, "2", 540, {})
     assert config == Config(
         idle_threshold_sec=270,
         warm_interval_sec=270,
@@ -12,38 +12,20 @@ def test_defaults():
         subagent_active_window_sec=540,
         disabled=False,
     )
-    assert passthrough == []
 
 
-def test_flag_overrides_env_overrides_default():
-    config, _ = load_config([], {})
-    assert config.idle_threshold_sec == 270
-
-    config, _ = load_config([], {"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
-    assert config.idle_threshold_sec == 300
-
-    config, _ = load_config(["--idle", "400"], {"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
-    assert config.idle_threshold_sec == 400
-
-
-def test_auto_max_cycles():
-    config, _ = load_config(["-n", "auto"], {})
+def test_build_config_auto_max_cycles():
+    config = build_config(270, 270, "auto", 540, {})
     assert config.warm_max_cycles is None
 
 
-def test_bad_max_cycles_raises():
+@pytest.mark.parametrize("max_cycles_raw", ["-1", "x"])
+def test_build_config_bad_max_cycles_raises(max_cycles_raw):
     with pytest.raises(ValueError, match=r'max-cycles must be a non-negative integer or "auto"'):
-        load_config(["-n", "-1"], {})
+        build_config(270, 270, max_cycles_raw, 540, {})
 
 
-def test_disable_env():
-    config, _ = load_config([], {"CLAUDE_WARMER_DISABLE": "1"})
-    assert config.disabled is True
-
-    config, _ = load_config([], {"CLAUDE_WARMER_DISABLE": "0"})
-    assert config.disabled is False
-
-
-def test_passthrough_split():
-    config, passthrough = load_config(["--idle", "300", "--", "chat", "-p", "hi"], {})
-    assert passthrough == ["chat", "-p", "hi"]
+def test_build_config_disabled_env():
+    assert build_config(270, 270, "2", 540, {"CLAUDE_WARMER_DISABLE": "1"}).disabled is True
+    assert build_config(270, 270, "2", 540, {"CLAUDE_WARMER_DISABLE": "0"}).disabled is False
+    assert build_config(270, 270, "2", 540, {}).disabled is False
