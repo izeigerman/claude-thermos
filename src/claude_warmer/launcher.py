@@ -2,7 +2,10 @@ import asyncio
 import os
 import subprocess
 import threading
-from typing import Callable, Protocol
+from collections.abc import Callable, Mapping
+from typing import Protocol
+
+from mitmproxy.tools.dump import DumpMaster
 
 from claude_warmer.config import Config
 from claude_warmer.proxy import build_master, find_free_port
@@ -37,18 +40,19 @@ class RealProxyHandle:
     def __init__(self, port: int, addon: object | None = None) -> None:
         self.port = port
         self.addon = addon
-        self.master = None
+        self.master: DumpMaster | None = None
         self.thread: threading.Thread | None = None
 
     def start(self) -> None:
-        self.master = build_master(self.port, self.addon)
-        loop = self.master.event_loop
+        master = build_master(self.port, self.addon)
+        self.master = master
+        loop = master.event_loop
 
         def _run() -> None:
             asyncio.set_event_loop(loop)
             try:
-                loop.run_until_complete(self.master.run())
-                proxyserver = self.master.addons.get("proxyserver")
+                loop.run_until_complete(master.run())
+                proxyserver = master.addons.get("proxyserver")
                 if proxyserver is not None:
                     loop.run_until_complete(proxyserver.servers.update([]))
             finally:
@@ -65,7 +69,7 @@ class RealProxyHandle:
             self.thread.join(timeout=10)
 
 
-def child_env(base_env: dict[str, str], port: int) -> dict[str, str]:
+def child_env(base_env: Mapping[str, str], port: int) -> dict[str, str]:
     """Return a copy of base_env with ANTHROPIC_BASE_URL set to
     http://127.0.0.1:<port>."""
     env = dict(base_env)
@@ -94,10 +98,8 @@ def run_launcher(
     for testing."""
     port = find_free_port()
 
-    if config.disabled:
-        addon = None
-    else:
-        addon = None  # no warming addon implemented yet
+    # No warming addon exists yet; when one does, the disabled path keeps it off.
+    addon = None
 
     proxy = proxy_factory(port, addon)
     proxy.start()

@@ -1,4 +1,5 @@
 import argparse
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 _MAX_CYCLES_ERROR = 'max-cycles must be a non-negative integer or "auto"'
@@ -49,7 +50,9 @@ def _is_disabled(environ: dict[str, str]) -> bool:
     return raw.strip().lower() not in ("0", "false")
 
 
-def _resolve_int(flag_value: int | None, env_name: str, environ: dict[str, str], default: int) -> int:
+def _resolve_int(
+    flag_value: int | None, env_name: str, environ: dict[str, str], default: int
+) -> int:
     if flag_value is not None:
         return flag_value
     if env_name in environ:
@@ -57,18 +60,14 @@ def _resolve_int(flag_value: int | None, env_name: str, environ: dict[str, str],
     return default
 
 
-def load_config(argv: list[str], environ: dict[str, str]) -> tuple[Config, list[str]]:
+def load_config(argv: list[str], environ: Mapping[str, str]) -> tuple[Config, list[str]]:
     """Resolve config from CLI flags over env vars over defaults, and return
     (config, claude_passthrough_args). Splits argv on the first '--'."""
     known_argv, passthrough = split_passthrough(argv)
     args = _build_parser().parse_args(known_argv)
 
-    idle_threshold_sec = _resolve_int(
-        args.idle, "CLAUDE_WARMER_IDLE_THRESHOLD_SEC", environ, 270
-    )
-    warm_interval_sec = _resolve_int(
-        args.interval, "CLAUDE_WARMER_WARM_INTERVAL_SEC", environ, 270
-    )
+    idle_threshold_sec = _resolve_int(args.idle, "CLAUDE_WARMER_IDLE_THRESHOLD_SEC", environ, 270)
+    warm_interval_sec = _resolve_int(args.interval, "CLAUDE_WARMER_WARM_INTERVAL_SEC", environ, 270)
     subagent_active_window_sec = _resolve_int(
         args.subagent_window, "CLAUDE_WARMER_SUBAGENT_ACTIVE_WINDOW_SEC", environ, 540
     )

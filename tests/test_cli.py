@@ -10,9 +10,7 @@ def test_main_help_exits_zero():
 
 
 def test_double_dash_splits_passthrough():
-    known, passthrough = split_passthrough(
-        ["--idle", "300", "--", "chat", "--model", "x"]
-    )
+    known, passthrough = split_passthrough(["--idle", "300", "--", "chat", "--model", "x"])
     assert known == ["--idle", "300"]
     assert passthrough == ["chat", "--model", "x"]
 

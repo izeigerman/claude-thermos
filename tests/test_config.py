@@ -22,9 +22,7 @@ def test_flag_overrides_env_overrides_default():
     config, _ = load_config([], {"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
     assert config.idle_threshold_sec == 300
 
-    config, _ = load_config(
-        ["--idle", "400"], {"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"}
-    )
+    config, _ = load_config(["--idle", "400"], {"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
     assert config.idle_threshold_sec == 400
 
 
@@ -47,7 +45,5 @@ def test_disable_env():
 
 
 def test_passthrough_split():
-    config, passthrough = load_config(
-        ["--idle", "300", "--", "chat", "-p", "hi"], {}
-    )
+    config, passthrough = load_config(["--idle", "300", "--", "chat", "-p", "hi"], {})
     assert passthrough == ["chat", "-p", "hi"]
