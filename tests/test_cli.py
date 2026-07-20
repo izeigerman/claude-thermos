@@ -1,23 +1,25 @@
+import pytest
 from click.testing import CliRunner
 
 from claude_warmer.cli import main
+from claude_warmer.config import Config
 
 
-def test_help_exits_zero():
+def test_help_exits_zero() -> None:
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
 
 
-def test_bad_max_cycles_reports_error():
+def test_bad_max_cycles_reports_error() -> None:
     result = CliRunner().invoke(main, ["-n", "-1"])
     assert result.exit_code != 0
     assert 'max-cycles must be a non-negative integer or "auto"' in result.output
 
 
-def test_flag_env_precedence_and_passthrough(monkeypatch):
+def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = {}
 
-    def recorder(config, claude_args):
+    def recorder(config: Config, claude_args: list[str]) -> int:
         captured["config"] = config
         captured["claude_args"] = claude_args
         return 0
@@ -42,10 +44,10 @@ def test_flag_env_precedence_and_passthrough(monkeypatch):
     assert captured["config"].idle_threshold_sec == 300
 
 
-def test_passthrough_without_double_dash(monkeypatch):
+def test_passthrough_without_double_dash(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = {}
 
-    def recorder(config, claude_args):
+    def recorder(config: Config, claude_args: list[str]) -> int:
         captured["config"] = config
         captured["claude_args"] = claude_args
         return 0

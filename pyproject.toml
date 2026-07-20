@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "claude-warmer"
 version = "0.1.0"
-description = "Launcher that wraps Claude Code with a local reverse proxy to keep its prompt cache warm."
+description = "Keeps your Claude session warm for you."
 requires-python = ">=3.11"
 dependencies = ["mitmproxy", "click"]
 

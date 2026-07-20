@@ -3,14 +3,14 @@ import socket
 from claude_warmer.proxy import build_master, find_free_port
 
 
-def test_find_free_port_bindable():
+def test_find_free_port_bindable() -> None:
     port = find_free_port()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", port))
 
 
-def test_build_master_reverse_options():
+def test_build_master_reverse_options() -> None:
     port = find_free_port()
 
     master = build_master(port, None)
@@ -20,7 +20,7 @@ def test_build_master_reverse_options():
     assert master.options.listen_port == port
 
 
-def test_build_master_registers_addon():
+def test_build_master_registers_addon() -> None:
     port = find_free_port()
     sentinel = object()
 

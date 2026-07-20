@@ -1,5 +1,6 @@
 import socket
 import time
+from typing import Never
 
 import pytest
 
@@ -8,7 +9,7 @@ from claude_warmer.launcher import RealProxyHandle, child_env, run_launcher
 from claude_warmer.proxy import find_free_port
 
 
-def test_child_env_sets_base_url():
+def test_child_env_sets_base_url() -> None:
     base_env = {"PATH": "/usr/bin"}
 
     env = child_env(base_env, 8123)
@@ -18,28 +19,28 @@ def test_child_env_sets_base_url():
 
 
 class _FakeProxyHandle:
-    def __init__(self, port):
+    def __init__(self, port: int) -> None:
         self.port = port
         self.start_calls = 0
         self.stop_calls = 0
 
-    def start(self):
+    def start(self) -> None:
         self.start_calls += 1
 
-    def stop(self):
+    def stop(self) -> None:
         self.stop_calls += 1
 
 
-def test_run_launcher_injects_env_and_tears_down():
+def test_run_launcher_injects_env_and_tears_down() -> None:
     captured = {}
     handles = []
 
-    def fake_proxy_factory(port, addon):
+    def fake_proxy_factory(port: int, addon: object | None) -> _FakeProxyHandle:
         handle = _FakeProxyHandle(port)
         handles.append(handle)
         return handle
 
-    def fake_spawn(args, env):
+    def fake_spawn(args: list[str], env: dict[str, str]) -> int:
         captured["args"] = args
         captured["env"] = env
         return 7
@@ -60,13 +61,13 @@ def test_run_launcher_injects_env_and_tears_down():
     assert handle.stop_calls == 1
 
 
-def test_run_launcher_stops_proxy_on_child_error():
+def test_run_launcher_stops_proxy_on_child_error() -> None:
     handle = _FakeProxyHandle(8123)
 
-    def fake_proxy_factory(port, addon):
+    def fake_proxy_factory(port: int, addon: object | None) -> _FakeProxyHandle:
         return handle
 
-    def fake_spawn(args, env):
+    def fake_spawn(args: list[str], env: dict[str, str]) -> Never:
         raise RuntimeError("boom")
 
     config = Config()
@@ -92,7 +93,7 @@ def _can_connect(port: int) -> bool:
             return False
 
 
-def test_real_proxy_handle_starts_and_stops():
+def test_real_proxy_handle_starts_and_stops() -> None:
     port = find_free_port()
     handle = RealProxyHandle(port)
 
