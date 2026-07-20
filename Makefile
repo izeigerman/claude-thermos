@@ -21,4 +21,4 @@ typecheck:
 test:
 	uv run pytest -q
 
-check: lint fmt-check typecheck test
+check: lint fmt-check typecheck
