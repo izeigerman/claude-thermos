@@ -7,13 +7,10 @@ install:
 	uv sync --all-packages --inexact
 
 lint:
-	uv run ruff check .
+	uv run ruff check . --fix
 
 format:
-	uv run ruff format .
-
-fmt-check:
-	uv run ruff format --check .
+	uv run ruff format . --line-length 100
 
 typecheck:
 	uv run ty check
@@ -21,4 +18,4 @@ typecheck:
 test:
 	uv run pytest -q
 
-check: lint fmt-check typecheck
+style: lint format typecheck
