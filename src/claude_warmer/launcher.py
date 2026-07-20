@@ -12,8 +12,6 @@ from claude_warmer.proxy import build_master, find_free_port
 
 
 class ProxyHandle(Protocol):
-    port: int
-
     def start(self) -> None: ...
     def stop(self) -> None: ...
 
@@ -38,14 +36,14 @@ class RealProxyHandle:
     """
 
     def __init__(self, port: int, addon: object | None = None) -> None:
-        self.port = port
-        self.addon = addon
-        self.master: DumpMaster | None = None
-        self.thread: threading.Thread | None = None
+        self._port = port
+        self._addon = addon
+        self._master: DumpMaster | None = None
+        self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        master = build_master(self.port, self.addon)
-        self.master = master
+        master = build_master(self._port, self._addon)
+        self._master = master
         loop = master.event_loop
 
         def _run() -> None:
@@ -58,15 +56,15 @@ class RealProxyHandle:
             finally:
                 loop.close()
 
-        self.thread = threading.Thread(target=_run, daemon=True)
-        self.thread.start()
+        self._thread = threading.Thread(target=_run, daemon=True)
+        self._thread.start()
 
     def stop(self) -> None:
-        if self.master is None:
+        if self._master is None:
             return
-        self.master.shutdown()
-        if self.thread is not None:
-            self.thread.join(timeout=10)
+        self._master.shutdown()
+        if self._thread is not None:
+            self._thread.join(timeout=10)
 
 
 def child_env(base_env: Mapping[str, str], port: int) -> dict[str, str]:

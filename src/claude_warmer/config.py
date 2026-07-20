@@ -43,7 +43,7 @@ def _parse_max_cycles(value: int | str) -> int | None:
     return parsed
 
 
-def _is_disabled(environ: dict[str, str]) -> bool:
+def _is_disabled(environ: Mapping[str, str]) -> bool:
     raw = environ.get("CLAUDE_WARMER_DISABLE", "")
     if not raw:
         return False
@@ -51,7 +51,7 @@ def _is_disabled(environ: dict[str, str]) -> bool:
 
 
 def _resolve_int(
-    flag_value: int | None, env_name: str, environ: dict[str, str], default: int
+    flag_value: int | None, env_name: str, environ: Mapping[str, str], default: int
 ) -> int:
     if flag_value is not None:
         return flag_value

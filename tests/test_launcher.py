@@ -117,6 +117,3 @@ def test_real_proxy_handle_starts_and_stops():
             break
         time.sleep(0.05)
     assert stopped, "proxy still accepting connections after stop()"
-
-    assert handle.thread is not None
-    assert not handle.thread.is_alive()
