@@ -8,7 +8,7 @@ from typing import Protocol
 from mitmproxy.tools.dump import DumpMaster
 
 from claude_warmer.config import Config
-from claude_warmer.proxy import build_master, find_free_port
+from claude_warmer.proxy import WarmerAddon, build_master, find_free_port
 
 
 class ProxyHandle(Protocol):
@@ -96,8 +96,7 @@ def run_launcher(
     for testing."""
     port = find_free_port()
 
-    # No warming addon exists yet; when one does, the disabled path keeps it off.
-    addon = None
+    addon = None if config.disabled else WarmerAddon()
 
     proxy = proxy_factory(port, addon)
     proxy.start()
