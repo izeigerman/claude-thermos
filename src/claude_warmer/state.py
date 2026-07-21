@@ -75,6 +75,17 @@ class SessionState:
         best = min(candidates, key=lambda state: (state.first_seen, state.lineage_id))
         return best.lineage_id
 
+    def main_lineage(self) -> LineageState | None:
+        """Return the main lineage's state, or None if none exists yet.
+
+        Returns:
+            The LineageState of the main lineage, or None.
+        """
+        main_id = self.main_lineage_id()
+        if main_id is None:
+            return None
+        return self._lineages[main_id]
+
     def is_main_idle(self, now: float, idle_threshold_sec: int) -> bool:
         """Report whether the main lineage is idle.
 

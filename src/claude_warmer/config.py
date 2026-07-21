@@ -1,7 +1,13 @@
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 _MAX_CYCLES_ERROR = 'max-cycles must be a non-negative integer or "auto"'
+
+# Upstream Anthropic API the proxy reverse-proxies to and warm requests are
+# sent to. Resolved once from the environment so the reverse proxy and the
+# warmer always agree on the same endpoint.
+ANTHROPIC_BASE_URL = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
 
 
 @dataclass(frozen=True)

@@ -1,19 +1,21 @@
 import asyncio
 import json
-import os
 import socket
 import time
 from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass
 from typing import Protocol
 
+import httpx
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
+from claude_warmer.config import ANTHROPIC_BASE_URL, Config
 from claude_warmer.eventlog import EventLog, EventType
 from claude_warmer.lineage import LineageId, extract_session_id
 from claude_warmer.state import SessionState
 from claude_warmer.usage import Usage, parse_usage_json, parse_usage_sse
+from claude_warmer.warmer import Warmer
 
 MESSAGES_PATH = "/v1/messages"
 
@@ -44,9 +46,8 @@ def build_master(port: int, addon: object | None) -> DumpMaster:
     Returns:
         The configured, unstarted DumpMaster.
     """
-    anthropic_base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
     options = Options(
-        mode=[f"reverse:{anthropic_base_url}"],
+        mode=[f"reverse:{ANTHROPIC_BASE_URL}"],
         listen_host="127.0.0.1",
         listen_port=port,
     )
@@ -188,15 +189,43 @@ class _Session:
 
 class WarmerAddon:
     """mitmproxy addon that observes /v1/messages traffic into per-session
-    SessionState + EventLog and emits structured events. Fires no warm
-    requests of its own."""
+    SessionState + EventLog, emits structured events, and drives a Warmer
+    that refreshes the main lineage's cache prefix while a subagent runs.
+
+    Unless warming is disabled, the addon owns a Warmer and a background
+    task started from mitmproxy's `running` hook (on the proxy event loop)
+    that polls the active sessions. On shutdown the task is cancelled, each
+    session's summary is written, and its event log is closed."""
 
     def __init__(
         self,
+        config: Config | None = None,
         eventlog_factory: Callable[[str], EventLog] = EventLog,
+        client: httpx.AsyncClient | None = None,
     ) -> None:
+        self._config = config if config is not None else Config()
         self._eventlog_factory = eventlog_factory
         self._sessions: dict[str, _Session] = {}
+        self._warmer: Warmer | None = None
+        if not self._config.disabled:
+            self._warmer = Warmer(self._config, client=client)
+        self._warmer_task: asyncio.Task | None = None
+
+    def active_sessions(self) -> list[tuple[SessionState, EventLog]]:
+        """Return the active (SessionState, EventLog) pairs.
+
+        Returns:
+            One pair per session seen so far.
+        """
+        return [(session.state, session.eventlog) for session in self._sessions.values()]
+
+    def running(self) -> None:
+        """Handle mitmproxy's startup hook on the proxy event loop.
+
+        Starts the background warming task unless warming is disabled.
+        """
+        if self._warmer is not None and self._warmer_task is None:
+            self._warmer_task = asyncio.create_task(self._warmer.run(self.active_sessions))
 
     def request(self, flow: FlowLike) -> None:
         """Handle a mitmproxy request hook.
@@ -252,10 +281,16 @@ class WarmerAddon:
     def done(self) -> None:
         """Handle mitmproxy's addon shutdown hook.
 
-        Closes every session's event log, which drains each writer's queue
-        and flushes it to disk before the process exits.
+        Cancels the warming task, then for each session emits a session_end
+        event and closes the event log, which drains its writer's queue to
+        disk and writes summary.json with the rollup totals.
         """
+        if self._warmer_task is not None:
+            self._warmer_task.cancel()
+            self._warmer_task = None
         for session in self._sessions.values():
+            main_id = session.state.main_lineage_id() or LineageId("")
+            session.eventlog.emit(EventType.SESSION_END, lineage_id=main_id)
             session.eventlog.close()
 
     def _get_or_create_session(self, session_id: str) -> _Session:

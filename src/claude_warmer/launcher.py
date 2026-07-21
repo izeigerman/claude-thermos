@@ -117,7 +117,7 @@ def run_launcher(
     """
     port = find_free_port()
 
-    addon = None if config.disabled else WarmerAddon()
+    addon = None if config.disabled else WarmerAddon(config=config)
 
     proxy = proxy_factory(port, addon)
     proxy.start()

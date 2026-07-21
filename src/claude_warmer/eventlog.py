@@ -15,8 +15,14 @@ class EventType(StrEnum):
     on-disk JSONL format carries the raw event name."""
 
     SESSION_START = "session_start"
+    SESSION_END = "session_end"
     LINEAGE_SEEN = "lineage_seen"
     USAGE = "usage"
+    WARM_FIRED = "warm_fired"
+    WARM_RESULT = "warm_result"
+    WARM_ERROR = "warm_error"
+    CAP_REACHED = "cap_reached"
+    RESUME_DETECTED = "resume_detected"
 
 
 class EventLog:
@@ -31,9 +37,10 @@ class EventLog:
 
     A `None` on the queue is the shutdown sentinel. `close` enqueues it and
     joins the writer, which guarantees every queued record is flushed
-    before the file is closed. Because the writer is a daemon thread,
-    `close` MUST be called to avoid losing records still in the queue at
-    process exit.
+    before the file is closed, then writes summary.json with the rollup
+    totals accumulated from the emitted events. Because the writer is a
+    daemon thread, `close` MUST be called to avoid losing records still in
+    the queue at process exit.
     """
 
     def __init__(self, session_id: str, root: Path | None = None) -> None:
@@ -42,6 +49,8 @@ class EventLog:
         self._session_dir = root / session_id
         self._session_dir.mkdir(parents=True, exist_ok=True)
         self._file: TextIO = (self._session_dir / "events.jsonl").open("a")
+        self._warms_fired = 0
+        self._cache_read_total = 0
         self._queue: queue.Queue[str | None] = queue.Queue()
         self._writer = threading.Thread(
             target=self._drain, name=f"eventlog-{session_id}", daemon=True
@@ -49,8 +58,19 @@ class EventLog:
         self._writer.start()
 
     def emit(self, event: EventType, lineage_id: LineageId, **fields: Any) -> None:
+        if event is EventType.WARM_FIRED:
+            self._warms_fired += 1
+        elif event is EventType.WARM_RESULT:
+            self._cache_read_total += fields.get("usage", {}).get("cache_read", 0)
         record = {"ts": round(time.time(), 3), "event": event, "lineage_id": lineage_id, **fields}
         self._queue.put_nowait(json.dumps(record) + "\n")
+
+    def _write_summary(self) -> None:
+        summary = {
+            "warms_fired": self._warms_fired,
+            "cache_read_total": self._cache_read_total,
+        }
+        (self._session_dir / "summary.json").write_text(json.dumps(summary))
 
     def _drain(self) -> None:
         while True:
@@ -78,3 +98,4 @@ class EventLog:
         self._queue.put_nowait(None)
         self._writer.join()
         self._file.close()
+        self._write_summary()

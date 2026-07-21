@@ -7,10 +7,10 @@ name = "claude-warmer"
 version = "0.1.0"
 description = "Keeps your Claude session warm for you."
 requires-python = ">=3.11"
-dependencies = ["mitmproxy", "click"]
+dependencies = ["mitmproxy", "click", "httpx"]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff", "ty"]
+dev = ["pytest", "pytest-asyncio", "ruff", "ty"]
 
 [project.scripts]
 claude-warmer = "claude_warmer.cli:main"
@@ -47,3 +47,6 @@ line-ending = "auto"
 
 [tool.ty.rules]
 unused-ignore-comment = "warn"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

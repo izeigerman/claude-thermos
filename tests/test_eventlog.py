@@ -51,3 +51,16 @@ def test_usage_event_shape(tmp_path: Path) -> None:
     assert event["event"] == "usage"
     assert event["lineage_id"] == "lineage-a"
     assert event["usage"] == usage
+
+
+def test_close_writes_summary_with_rollup_totals(tmp_path: Path) -> None:
+    log = EventLog("sess-5", root=tmp_path)
+    lineage = LineageId("lineage-a")
+    log.emit(EventType.WARM_FIRED, lineage, cycle=1)
+    log.emit(EventType.WARM_RESULT, lineage, cycle=1, usage={"cache_read": 100})
+    log.emit(EventType.WARM_FIRED, lineage, cycle=2)
+    log.emit(EventType.WARM_RESULT, lineage, cycle=2, usage={"cache_read": 250})
+    log.close()
+
+    summary = json.loads((tmp_path / "sess-5" / "summary.json").read_text())
+    assert summary == {"warms_fired": 2, "cache_read_total": 350}
