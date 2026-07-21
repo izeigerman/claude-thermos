@@ -19,16 +19,31 @@ MESSAGES_PATH = "/v1/messages"
 
 
 def find_free_port() -> int:
-    """Bind a socket to 127.0.0.1:0, read the assigned port, close, return it."""
+    """Find a free TCP port on the loopback interface.
+
+    Binds a socket to 127.0.0.1:0, reads the assigned port, and closes it.
+
+    Returns:
+        The assigned port number.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
 def build_master(port: int, addon: object | None) -> DumpMaster:
-    """Construct a DumpMaster configured in reverse mode to
-    https://api.anthropic.com on 127.0.0.1:<port>, with quiet/no-terminal
-    options, registering `addon` if provided. Does not start it."""
+    """Construct a DumpMaster in reverse-proxy mode. Does not start it.
+
+    Configured in reverse mode to the Anthropic API (or ANTHROPIC_BASE_URL)
+    on 127.0.0.1:<port>, with quiet/no-terminal options.
+
+    Args:
+        port: Loopback port the proxy listens on.
+        addon: Addon to register, or None to register nothing.
+
+    Returns:
+        The configured, unstarted DumpMaster.
+    """
     anthropic_base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
     options = Options(
         mode=[f"reverse:{anthropic_base_url}"],
@@ -91,9 +106,22 @@ def _handle_request(
     now: float,
     seen_lineages: set[LineageId],
 ) -> LineageId:
-    """Record this request on `state` and emit session_start (first request
-    ever seen for this session) / lineage_seen (first sight of this
-    lineage). Returns the resolved lineage id."""
+    """Record a request on state and emit session/lineage events.
+
+    Emits session_start on the first request ever seen for the session and
+    lineage_seen on the first sight of a lineage.
+
+    Args:
+        state: The session's state.
+        eventlog: The session's event log.
+        body: The decoded request body.
+        headers: The request's headers.
+        now: Current time, in seconds.
+        seen_lineages: Lineage ids already seen this session; mutated in place.
+
+    Returns:
+        The resolved lineage id.
+    """
     lineage = LineageId.from_request_body(body)
     is_new_session = not seen_lineages
     is_new_lineage = lineage not in seen_lineages
@@ -125,8 +153,18 @@ def _handle_response(
     raw_response: bytes,
     now: float,
 ) -> None:
-    """Parse usage from `raw_response`, record the response on `state`, and
-    emit a usage event."""
+    """Record a response on state and emit a usage event.
+
+    Parses usage from `raw_response`, records the response on `state`, and
+    emits a usage event.
+
+    Args:
+        state: The session's state.
+        eventlog: The session's event log.
+        lineage: The response's lineage id.
+        raw_response: The raw response bytes.
+        now: Current time, in seconds.
+    """
     usage = _parse_usage(raw_response)
     state.on_response(lineage, now)
     eventlog.emit(
@@ -161,9 +199,15 @@ class WarmerAddon:
         self._sessions: dict[str, _Session] = {}
 
     def request(self, flow: FlowLike) -> None:
-        """mitmproxy hook: on a /v1/messages request, decode the JSON body,
-        resolve session/lineage, update state, and force
-        accept-encoding: identity so the response usage parses."""
+        """Handle a mitmproxy request hook.
+
+        On a /v1/messages request, decodes the JSON body, resolves
+        session/lineage, updates state, and forces accept-encoding:
+        identity so the response usage parses.
+
+        Args:
+            flow: The mitmproxy flow for the request.
+        """
         if not flow.request.path.startswith(MESSAGES_PATH):
             return
         flow.request.headers["accept-encoding"] = "identity"
@@ -182,9 +226,14 @@ class WarmerAddon:
         )
 
     def response(self, flow: FlowLike) -> None:
-        """mitmproxy hook: parse usage from the response, update state, emit
-        a usage event, then emit idle_detected/subagent_active on new
-        transitions. Never modifies the response body."""
+        """Handle a mitmproxy response hook.
+
+        Parses usage from the response, updates state, and emits a usage
+        event. Never modifies the response body.
+
+        Args:
+            flow: The mitmproxy flow for the response.
+        """
         if flow.response is None:
             return
         resolved = self._resolve_session_and_body(flow)

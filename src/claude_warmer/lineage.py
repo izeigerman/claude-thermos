@@ -5,8 +5,17 @@ _HASH_LENGTH = 8
 
 
 def extract_session_id(request_body: dict) -> str | None:
-    """Return metadata.user_id's embedded session_id, or None if absent/unparseable.
-    request_body['metadata']['user_id'] is a JSON string containing {"session_id": ...}."""
+    """Return the session_id embedded in metadata.user_id, or None.
+
+    request_body['metadata']['user_id'] is a JSON string containing
+    {"session_id": ...}. Returns None if it is absent or unparseable.
+
+    Args:
+        request_body: The decoded request body.
+
+    Returns:
+        The embedded session_id, or None if absent or unparseable.
+    """
     metadata = request_body.get("metadata")
     if not isinstance(metadata, dict):
         return None
@@ -45,10 +54,18 @@ class LineageId(str):
 
     @classmethod
     def from_request_body(cls, request_body: dict) -> "LineageId":
-        """Derive the lineage id from a request body. Two requests with the
-        same model, tool-name set, and system text produce equal ids; a
-        different model, tool set, or system text produces a different one.
-        Tool ordering does not affect the result."""
+        """Derive the lineage id from a request body.
+
+        Two requests with the same model, tool-name set, and system text
+        produce equal ids; a different model, tool set, or system text
+        produces a different one. Tool ordering does not affect the result.
+
+        Args:
+            request_body: The decoded request body.
+
+        Returns:
+            The lineage id for the request's cacheable prefix.
+        """
         model = request_body.get("model", "")
         tool_names = sorted(tool.get("name", "") for tool in request_body.get("tools", []))
         system_text = _system_text(request_body.get("system"))

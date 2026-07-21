@@ -68,8 +68,16 @@ class RealProxyHandle:
 
 
 def child_env(base_env: Mapping[str, str], port: int) -> dict[str, str]:
-    """Return a copy of base_env with ANTHROPIC_BASE_URL set to
-    http://127.0.0.1:<port>."""
+    """Return a copy of base_env pointing Claude at the local proxy.
+
+    Args:
+        base_env: The environment to copy.
+        port: Loopback port the proxy listens on.
+
+    Returns:
+        A copy of base_env with ANTHROPIC_BASE_URL set to
+        http://127.0.0.1:<port>.
+    """
     env = dict(base_env)
     env["ANTHROPIC_BASE_URL"] = f"http://127.0.0.1:{port}"
     return env
@@ -90,10 +98,23 @@ def run_launcher(
     proxy_factory: Callable[[int, object | None], ProxyHandle] = _default_proxy_factory,
     spawn: Callable[[list[str], dict[str, str]], int] = _default_spawn,
 ) -> int:
-    """Start the proxy (unless config.disabled), spawn `claude` with
-    child_env + claude_args and inherited stdio, wait for it, then stop the
-    proxy. Returns the child's exit code. proxy_factory/spawn are injectable
-    for testing."""
+    """Run Claude Code behind the warming proxy.
+
+    Starts the proxy (unless config.disabled), spawns `claude` with
+    child_env + claude_args and inherited stdio, waits for it, then stops
+    the proxy.
+
+    Args:
+        config: Resolved launcher configuration.
+        claude_args: Extra arguments passed through to `claude`.
+        proxy_factory: Factory building a ProxyHandle from port and addon;
+            injectable for testing.
+        spawn: Callable that runs `claude` and returns its exit code;
+            injectable for testing.
+
+    Returns:
+        The child process's exit code.
+    """
     port = find_free_port()
 
     addon = None if config.disabled else WarmerAddon()

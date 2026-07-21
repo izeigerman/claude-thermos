@@ -39,9 +39,21 @@ def build_config(
     subagent_active_window_sec: int,
     environ: Mapping[str, str],
 ) -> Config:
-    """Build a Config from already-resolved option values (flag/env/default
-    precedence is handled by the CLI layer), parsing max_cycles and reading
-    the disable env var."""
+    """Build a Config from already-resolved option values.
+
+    Flag/env/default precedence is handled by the CLI layer; this parses
+    max_cycles and reads the disable env var.
+
+    Args:
+        idle_threshold_sec: Idle threshold, in seconds, before warming.
+        warm_interval_sec: Interval, in seconds, between warming cycles.
+        max_cycles_raw: Maximum warming cycles as a string, or "auto".
+        subagent_active_window_sec: Subagent active window, in seconds.
+        environ: Environment mapping read for the disable flag.
+
+    Returns:
+        A Config with the resolved and parsed values.
+    """
     return Config(
         idle_threshold_sec=idle_threshold_sec,
         warm_interval_sec=warm_interval_sec,

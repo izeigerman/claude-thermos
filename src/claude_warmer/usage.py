@@ -19,9 +19,18 @@ def _iter_sse_data(chunks: Iterable[bytes]) -> Iterable[dict]:
 
 
 def parse_usage_sse(chunks: Iterable[bytes]) -> Usage:
-    """Accumulate usage from an Anthropic SSE stream: input/cache fields from
-    the `message_start` event's message.usage, output_tokens from the final
-    `message_delta` event's usage. Missing fields default to 0."""
+    """Accumulate usage from an Anthropic SSE stream.
+
+    Input and cache fields come from the `message_start` event's
+    message.usage; output_tokens comes from the final `message_delta`
+    event's usage. Missing fields default to 0.
+
+    Args:
+        chunks: Raw byte chunks of the SSE stream.
+
+    Returns:
+        The accumulated Usage totals.
+    """
     uncached_input = 0
     cache_read = 0
     cache_creation = 0
@@ -40,8 +49,17 @@ def parse_usage_sse(chunks: Iterable[bytes]) -> Usage:
 
 
 def parse_usage_json(body: dict) -> Usage:
-    """Extract the same four fields from a non-streaming /v1/messages JSON
-    response's `usage` object (used for warm-request responses)."""
+    """Extract usage fields from a non-streaming JSON response.
+
+    Reads the same four fields from a /v1/messages JSON response's `usage`
+    object (used for warm-request responses).
+
+    Args:
+        body: The parsed JSON response body.
+
+    Returns:
+        The Usage totals from the response.
+    """
     usage = body.get("usage", {})
     return Usage(
         usage.get("input_tokens", 0),

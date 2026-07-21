@@ -22,9 +22,18 @@ class SessionState:
         self._lineages: dict[LineageId, LineageState] = {}
 
     def on_request(self, lineage: LineageId, body: dict, headers: dict, now: float) -> None:
-        """Create/update the lineage: bump in_flight & request_count, set
-        last_request_sent, store latest auth headers and last_request_body,
-        record has_tools = len(tools) > 0."""
+        """Create or update the lineage's state for a new request.
+
+        Bumps in_flight and request_count, sets last_request_sent, stores
+        the latest auth headers and last_request_body, and records
+        has_tools = len(tools) > 0.
+
+        Args:
+            lineage: The request's lineage id.
+            body: The decoded request body.
+            headers: The request's headers.
+            now: Current time, in seconds.
+        """
         state = self._lineages.get(lineage)
         if state is None:
             state = LineageState(lineage_id=lineage, first_seen=now, last_request_sent=now)
@@ -37,7 +46,14 @@ class SessionState:
         state.has_tools = len(body.get("tools", [])) > 0
 
     def on_response(self, lineage: LineageId, now: float) -> None:
-        """Decrement in_flight (floor 0) and set last_response_end."""
+        """Record a completed response for the lineage.
+
+        Decrements in_flight (floored at 0) and sets last_response_end.
+
+        Args:
+            lineage: The response's lineage id.
+            now: Current time, in seconds.
+        """
         state = self._lineages.get(lineage)
         if state is None:
             return
@@ -45,8 +61,14 @@ class SessionState:
         state.last_response_end = now
 
     def main_lineage_id(self) -> LineageId | None:
-        """The first substantive lineage: earliest first_seen among lineages
-        with has_tools True. None if none yet."""
+        """Return the id of the first substantive lineage.
+
+        The main lineage has the earliest first_seen among lineages with
+        has_tools True.
+
+        Returns:
+            The main lineage id, or None if none exists yet.
+        """
         candidates = [state for state in self._lineages.values() if state.has_tools]
         if not candidates:
             return None
@@ -54,8 +76,16 @@ class SessionState:
         return best.lineage_id
 
     def is_main_idle(self, now: float, idle_threshold_sec: int) -> bool:
-        """True iff a main lineage exists, its in_flight == 0, and
-        now - last_response_end >= idle_threshold_sec."""
+        """Report whether the main lineage is idle.
+
+        Args:
+            now: Current time, in seconds.
+            idle_threshold_sec: Seconds of inactivity that count as idle.
+
+        Returns:
+            True iff a main lineage exists, its in_flight is 0, and
+            now - last_response_end >= idle_threshold_sec.
+        """
         main_id = self.main_lineage_id()
         if main_id is None:
             return False
@@ -63,8 +93,16 @@ class SessionState:
         return main.in_flight == 0 and now - main.last_response_end >= idle_threshold_sec
 
     def subagent_active(self, now: float, window_sec: int) -> bool:
-        """True iff any non-main lineage has in_flight > 0 or
-        now - max(last_request_sent, last_response_end) < window_sec."""
+        """Report whether any subagent (non-main) lineage is active.
+
+        Args:
+            now: Current time, in seconds.
+            window_sec: Recency window, in seconds, for recent activity.
+
+        Returns:
+            True iff any non-main lineage has in_flight > 0 or
+            now - max(last_request_sent, last_response_end) < window_sec.
+        """
         main_id = self.main_lineage_id()
         for lineage, state in self._lineages.items():
             if lineage == main_id:
