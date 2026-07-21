@@ -1,4 +1,5 @@
 import asyncio
+import os
 import socket
 
 from mitmproxy.options import Options
@@ -16,8 +17,9 @@ def build_master(port: int, addon: object | None) -> DumpMaster:
     """Construct a DumpMaster configured in reverse mode to
     https://api.anthropic.com on 127.0.0.1:<port>, with quiet/no-terminal
     options, registering `addon` if provided. Does not start it."""
+    anthropic_base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
     options = Options(
-        mode=["reverse:https://api.anthropic.com"],
+        mode=[f"reverse:{anthropic_base_url}"],
         listen_host="127.0.0.1",
         listen_port=port,
     )
