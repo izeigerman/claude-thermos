@@ -49,7 +49,7 @@ class EventLog:
         self._writer.start()
 
     def emit(self, event: EventType, lineage_id: LineageId, **fields: Any) -> None:
-        record = {"ts": time.time(), "event": event, "lineage_id": lineage_id, **fields}
+        record = {"ts": round(time.time(), 3), "event": event, "lineage_id": lineage_id, **fields}
         self._queue.put_nowait(json.dumps(record) + "\n")
 
     def _drain(self) -> None:
