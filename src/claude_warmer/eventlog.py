@@ -4,6 +4,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, TextIO
 
+from claude_warmer.lineage import LineageId
+
 
 class EventType(StrEnum):
     """Names of the structured events written to the event log. As a
@@ -23,8 +25,8 @@ class EventLog:
         self._session_dir.mkdir(parents=True, exist_ok=True)
         self._file: TextIO = (self._session_dir / "events.jsonl").open("a")
 
-    def emit(self, event: EventType, **fields: Any) -> None:
-        record = {"ts": time.time(), "event": event, **fields}
+    def emit(self, event: EventType, lineage_id: LineageId, **fields: Any) -> None:
+        record = {"ts": time.time(), "event": event, "lineage_id": lineage_id, **fields}
         self._file.write(json.dumps(record) + "\n")
         self._file.flush()
 

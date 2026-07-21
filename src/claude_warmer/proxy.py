@@ -129,10 +129,10 @@ def _handle_request(
     state.on_request(lineage, body, headers, now)
 
     if is_new_session:
-        eventlog.emit(EventType.SESSION_START, session_id=state.session_id, lineage=lineage)
+        eventlog.emit(EventType.SESSION_START, lineage_id=lineage, session_id=state.session_id)
     if is_new_lineage:
         eventlog.emit(
-            EventType.LINEAGE_SEEN, lineage=lineage, has_tools=len(body.get("tools", [])) > 0
+            EventType.LINEAGE_SEEN, lineage_id=lineage, has_tools=len(body.get("tools", [])) > 0
         )
         seen_lineages.add(lineage)
 
@@ -169,7 +169,7 @@ def _handle_response(
     state.on_response(lineage, now)
     eventlog.emit(
         EventType.USAGE,
-        lineage=lineage,
+        lineage_id=lineage,
         usage={
             "uncached_input": usage.uncached_input,
             "cache_read": usage.cache_read,

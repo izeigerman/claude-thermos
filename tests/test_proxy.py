@@ -81,9 +81,9 @@ def test_handle_request_emits_session_and_lineage(tmp_path: Path) -> None:
     session_start = [e for e in events if e["event"] == "session_start"]
     lineage_seen = [e for e in events if e["event"] == "lineage_seen"]
     assert len(session_start) == 1
-    assert session_start[0]["lineage"] == lineage
+    assert session_start[0]["lineage_id"] == lineage
     assert len(lineage_seen) == 1
-    assert lineage_seen[0]["lineage"] == lineage
+    assert lineage_seen[0]["lineage_id"] == lineage
 
 
 def test_handle_response_emits_usage(tmp_path: Path) -> None:
@@ -116,7 +116,7 @@ def test_handle_response_emits_usage(tmp_path: Path) -> None:
     events = _events(tmp_path)
     usage_events = [e for e in events if e["event"] == "usage"]
     assert len(usage_events) == 1
-    assert usage_events[0]["lineage"] == lineage
+    assert usage_events[0]["lineage_id"] == lineage
     assert usage_events[0]["usage"] == {
         "uncached_input": 2,
         "cache_read": 157547,
