@@ -241,6 +241,7 @@ def test_request_response_round_trip_emits_events(tmp_path: Path) -> None:
         + _sse_event("message_delta", {"usage": {"output_tokens": 5}})
     )
     addon.response(flow)
+    addon.done()
 
     events = _events(tmp_path)
     event_types = [e["event"] for e in events]

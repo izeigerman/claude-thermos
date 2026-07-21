@@ -249,6 +249,15 @@ class WarmerAddon:
             time.time(),
         )
 
+    def done(self) -> None:
+        """Handle mitmproxy's addon shutdown hook.
+
+        Closes every session's event log, which drains each writer's queue
+        and flushes it to disk before the process exits.
+        """
+        for session in self._sessions.values():
+            session.eventlog.close()
+
     def _get_or_create_session(self, session_id: str) -> _Session:
         session = self._sessions.get(session_id)
         if session is None:

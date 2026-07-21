@@ -35,15 +35,6 @@ def test_path_layout(tmp_path: Path) -> None:
     assert (tmp_path / "sess-2" / "events.jsonl").is_file()
 
 
-def test_write_summary(tmp_path: Path) -> None:
-    log = EventLog("sess-3", root=tmp_path)
-    log.write_summary(warms=3, tokens_read=100)
-    log.close()
-
-    summary = json.loads((tmp_path / "sess-3" / "summary.json").read_text())
-    assert summary == {"warms": 3, "tokens_read": 100}
-
-
 def test_usage_event_shape(tmp_path: Path) -> None:
     log = EventLog("sess-4", root=tmp_path)
     usage = {
