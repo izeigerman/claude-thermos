@@ -4,7 +4,7 @@ BIN := $(VENV)/bin
 .PHONY: install lint format fmt-check typecheck test check style style-check
 
 install:
-	uv sync --all-packages --inexact
+	uv sync --all-packages --all-extras --inexact
 
 lint:
 	uv run ruff check . --fix
