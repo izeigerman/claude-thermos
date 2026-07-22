@@ -86,7 +86,7 @@ async def test_warms_when_idle_and_subagent_active(tmp_path: Path) -> None:
     assert len(requests) == 1
     assert requests[0].url.path == "/v1/messages"
     assert requests[0].headers["authorization"] == "Bearer abc"
-    assert json.loads(requests[0].content)["max_tokens"] == 0
+    assert json.loads(requests[0].content)["max_tokens"] == 1
 
     events = _read_events(tmp_path)
     names = [e["event"] for e in events]
@@ -250,11 +250,18 @@ def test_build_warm_request_preserves_prefix() -> None:
 
 def test_build_warm_request_neutralizes_generation_params() -> None:
     warm = build_warm_request(_stored_body())
-    assert warm["max_tokens"] == 0
+    assert warm["max_tokens"] == 1
     assert warm["stream"] is False
-    assert warm.get("thinking") in (None, {"type": "disabled"})
     assert "output_config" not in warm
-    assert "context_management" not in warm
+
+
+def test_build_warm_request_preserves_message_cache_keys() -> None:
+    body = _stored_body()
+    body["tool_choice"] = {"type": "any"}
+    warm = build_warm_request(body)
+    assert warm["thinking"] == body["thinking"]
+    assert warm["tool_choice"] == body["tool_choice"]
+    assert warm["context_management"] == body["context_management"]
 
 
 def test_build_warm_request_does_not_mutate_input() -> None:
@@ -262,10 +269,3 @@ def test_build_warm_request_does_not_mutate_input() -> None:
     original = _stored_body()
     build_warm_request(body)
     assert body == original
-
-
-def test_build_warm_request_removes_forcing_tool_choice() -> None:
-    body = _stored_body()
-    body["tool_choice"] = {"type": "any"}
-    warm = build_warm_request(body)
-    assert warm.get("tool_choice", {}).get("type") not in ("any", "tool")

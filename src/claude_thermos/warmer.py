@@ -12,17 +12,29 @@ from claude_thermos.state import LineageState, SessionState
 from claude_thermos.usage import Usage, parse_usage_json
 
 _DEFAULT_POLL_INTERVAL_SEC = 5.0
-_FORCING_TOOL_CHOICE = ("tool", "any")
+_WARM_MAX_TOKENS = 1
 
 
 def build_warm_request(body: dict) -> dict:
-    """Turn a stored real request body into a zero-output warm request.
+    """Turn a stored real request body into a minimal-output warm request.
 
-    The cacheable prefix — model, system, tools, and messages, including
-    every cache_control breakpoint — is preserved exactly. Generation
-    params are neutralized so the request produces no output: max_tokens is
-    set to 0, thinking and streaming are disabled, and output_config,
-    context_management, and any forcing tool_choice are removed.
+    The entire cacheable prefix is preserved exactly — model, system,
+    tools, messages, thinking, tool_choice, and context_management,
+    including every cache_control breakpoint — so the warm request reads
+    and refreshes every cache tier the real request uses, message history
+    included. The prompt cache keys the message tier on thinking state and
+    tool_choice, so stripping either would leave the real lineage's message
+    cache to expire; only tools and system survive that. Keeping them
+    intact is what makes the warm preserve the whole prefix.
+
+    Only generation is neutralized: max_tokens is capped at 1, streaming is
+    disabled, and output_config is removed. max_tokens is 1 rather than 0
+    because a zero-token request is rejected when thinking is enabled, and
+    thinking must stay enabled to keep the message tier warm. The single
+    generated token is discarded — the cache is written during prefill,
+    before generation. output_config is not part of the cache key, and
+    dropping it keeps a structured-output format from constraining the
+    one-token reply.
 
     Args:
         body: The stored last real main request body. Not mutated.
@@ -31,14 +43,9 @@ def build_warm_request(body: dict) -> dict:
         A new request body suitable for cache warming.
     """
     warm = copy.deepcopy(body)
-    warm["max_tokens"] = 0
+    warm["max_tokens"] = _WARM_MAX_TOKENS
     warm["stream"] = False
-    warm.pop("thinking", None)
     warm.pop("output_config", None)
-    warm.pop("context_management", None)
-    tool_choice = warm.get("tool_choice")
-    if isinstance(tool_choice, dict) and tool_choice.get("type") in _FORCING_TOOL_CHOICE:
-        warm.pop("tool_choice", None)
     return warm
 
 
