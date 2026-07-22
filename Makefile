@@ -6,6 +6,12 @@ BIN := $(VENV)/bin
 install:
 	uv sync --all-packages --all-extras --inexact
 
+build: install
+	uv build
+
+publish: build
+	uv publish
+
 lint:
 	uv run ruff check . --fix
 
