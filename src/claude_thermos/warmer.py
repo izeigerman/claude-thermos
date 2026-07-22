@@ -13,6 +13,13 @@ from claude_thermos.usage import Usage, parse_usage_json
 
 _DEFAULT_POLL_INTERVAL_SEC = 5.0
 _WARM_MAX_TOKENS = 1
+_WARM_TIMEOUT_SEC = 60.0
+
+# Captured request headers that must not be replayed on the warm request: the
+# host header points at the local proxy and content-length describes the
+# original body, so both are wrong for a direct call with a rewritten body.
+# httpx recomputes them for us once they are removed.
+_STRIPPED_HEADERS = frozenset({"host", "content-length"})
 
 
 def build_warm_request(body: dict) -> dict:
@@ -84,7 +91,11 @@ class Warmer:
     ) -> None:
         self._config = config
         self._base_url = base_url.rstrip("/")
-        self._client = client if client is not None else httpx.AsyncClient()
+        self._client = (
+            client
+            if client is not None
+            else httpx.AsyncClient(timeout=httpx.Timeout(_WARM_TIMEOUT_SEC))
+        )
         self._episodes: dict[str, _Episode] = {}
 
     async def tick(self, state: SessionState, eventlog: EventLog, now: float) -> None:
@@ -177,9 +188,11 @@ class Warmer:
     async def _send(self, body: dict, headers: dict) -> Usage | str:
         """POST a warm request built from `body`, failing quiet.
 
-        Any failure — a non-2xx status, a network error, or a timeout — is
-        swallowed and surfaced as an error string, never raised, so a failed
-        warm can never disturb real traffic.
+        Any failure — a non-2xx status, a network error, a timeout, or an
+        unexpected error while building or parsing — is swallowed and
+        surfaced as an error string, never raised, so a failed warm can
+        neither disturb real traffic nor kill the warming loop. Cancellation
+        propagates so the task can still be stopped cleanly.
 
         Args:
             body: The stored real request body to warm from.
@@ -192,13 +205,15 @@ class Warmer:
         warm_body = build_warm_request(body)
         try:
             response = await self._client.post(
-                f"{self._base_url}/v1/messages", json=warm_body, headers=headers
+                f"{self._base_url}/v1/messages",
+                json=warm_body,
+                headers=_replay_headers(headers),
             )
             response.raise_for_status()
             return parse_usage_json(response.json())
         except httpx.HTTPStatusError as exc:
             return f"HTTP {exc.response.status_code}: {_api_error_message(exc.response)}"
-        except (httpx.HTTPError, ValueError) as exc:
+        except Exception as exc:
             return f"{type(exc).__name__}: {exc}"
 
     def _reset(self, episode: _Episode) -> None:
@@ -228,6 +243,18 @@ class Warmer:
             for state, eventlog in sessions_provider():
                 await self.tick(state, eventlog, now)
             await asyncio.sleep(poll_interval_sec)
+
+
+def _replay_headers(headers: dict) -> dict:
+    """Drop headers that must not be replayed on the direct warm request.
+
+    Args:
+        headers: The captured request headers.
+
+    Returns:
+        A new dict without the stripped headers, matched case-insensitively.
+    """
+    return {k: v for k, v in headers.items() if k.lower() not in _STRIPPED_HEADERS}
 
 
 def _api_error_message(response: httpx.Response) -> str:

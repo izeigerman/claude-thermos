@@ -53,11 +53,11 @@ def _client_from(handler: Callable[[httpx.Request], httpx.Response]) -> httpx.As
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
-def _idle_session() -> SessionState:
+def _idle_session(headers: dict = _HEADERS) -> SessionState:
     state = SessionState("sess-1")
-    state.on_request(_MAIN_ID, _MAIN, _HEADERS, now=0)
+    state.on_request(_MAIN_ID, _MAIN, headers, now=0)
     state.on_response(_MAIN_ID, now=0)
-    state.on_request(_SUBAGENT_ID, _SUBAGENT, _HEADERS, now=100)
+    state.on_request(_SUBAGENT_ID, _SUBAGENT, headers, now=100)
     return state
 
 
@@ -208,6 +208,42 @@ async def test_warm_error_on_network_error(tmp_path: Path) -> None:
     assert "warm_result" not in names
     error = next(e for e in events if e["event"] == "warm_error")
     assert "boom" in error["error"]
+
+
+async def test_warm_error_on_unexpected_exception(tmp_path: Path) -> None:
+    state = _idle_session()
+    log = _events(tmp_path)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise RuntimeError("kaboom")
+
+    warmer = Warmer(_CONFIG, client=_client_from(handler))
+
+    await warmer.tick(state, log, now=400)
+    log.close()
+
+    events = _read_events(tmp_path)
+    names = [e["event"] for e in events]
+    assert "warm_result" not in names
+    error = next(e for e in events if e["event"] == "warm_error")
+    assert "kaboom" in error["error"]
+
+
+async def test_warm_strips_replay_hostile_headers(tmp_path: Path) -> None:
+    headers = {"authorization": "Bearer abc", "host": "127.0.0.1:8080", "content-length": "999999"}
+    state = _idle_session(headers)
+    log = _events(tmp_path)
+    requests: list[httpx.Request] = []
+    warmer = Warmer(_CONFIG, client=_recording_client(requests))
+
+    await warmer.tick(state, log, now=400)
+    log.close()
+
+    assert len(requests) == 1
+    sent = requests[0]
+    assert sent.headers["authorization"] == "Bearer abc"
+    assert sent.headers["host"] != "127.0.0.1:8080"
+    assert sent.headers["content-length"] == str(len(sent.content))
 
 
 def _stored_body() -> dict:
