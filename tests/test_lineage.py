@@ -1,6 +1,6 @@
 import json
 
-from claude_warmer.lineage import LineageId, extract_session_id
+from claude_thermos.lineage import LineageId, extract_session_id
 
 
 def _body(

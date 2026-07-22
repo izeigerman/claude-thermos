@@ -6,10 +6,10 @@ from dataclasses import dataclass
 
 import httpx
 
-from claude_warmer.config import ANTHROPIC_BASE_URL, Config
-from claude_warmer.eventlog import EventLog, EventType
-from claude_warmer.state import LineageState, SessionState
-from claude_warmer.usage import Usage, parse_usage_json
+from claude_thermos.config import ANTHROPIC_BASE_URL, Config
+from claude_thermos.eventlog import EventLog, EventType
+from claude_thermos.state import LineageState, SessionState
+from claude_thermos.usage import Usage, parse_usage_json
 
 _DEFAULT_POLL_INTERVAL_SEC = 5.0
 _FORCING_TOOL_CHOICE = ("tool", "any")

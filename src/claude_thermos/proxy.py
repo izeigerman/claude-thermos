@@ -10,12 +10,12 @@ import httpx
 from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
-from claude_warmer.config import ANTHROPIC_BASE_URL, Config
-from claude_warmer.eventlog import EventLog, EventType
-from claude_warmer.lineage import LineageId, extract_session_id
-from claude_warmer.state import SessionState
-from claude_warmer.usage import Usage, parse_usage_json, parse_usage_sse
-from claude_warmer.warmer import Warmer
+from claude_thermos.config import ANTHROPIC_BASE_URL, Config
+from claude_thermos.eventlog import EventLog, EventType
+from claude_thermos.lineage import LineageId, extract_session_id
+from claude_thermos.state import SessionState
+from claude_thermos.usage import Usage, parse_usage_json, parse_usage_sse
+from claude_thermos.warmer import Warmer
 
 MESSAGES_PATH = "/v1/messages"
 

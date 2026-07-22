@@ -3,8 +3,8 @@ import sys
 
 import click
 
-from claude_warmer.config import build_config
-from claude_warmer.launcher import run_launcher
+from claude_thermos.config import build_config
+from claude_thermos.launcher import run_launcher
 
 __all__ = ["main"]
 

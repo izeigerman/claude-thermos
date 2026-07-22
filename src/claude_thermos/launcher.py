@@ -7,8 +7,8 @@ from typing import Protocol
 
 from mitmproxy.tools.dump import DumpMaster
 
-from claude_warmer.config import Config
-from claude_warmer.proxy import WarmerAddon, build_master, find_free_port
+from claude_thermos.config import Config
+from claude_thermos.proxy import WarmerAddon, build_master, find_free_port
 
 
 class ProxyHandle(Protocol):

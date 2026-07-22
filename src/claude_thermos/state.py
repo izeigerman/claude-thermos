@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from claude_warmer.lineage import LineageId
+from claude_thermos.lineage import LineageId
 
 
 @dataclass

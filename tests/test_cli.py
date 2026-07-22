@@ -1,8 +1,8 @@
 import pytest
 from click.testing import CliRunner
 
-from claude_warmer.cli import main
-from claude_warmer.config import Config
+from claude_thermos.cli import main
+from claude_thermos.config import Config
 
 
 def test_help_exits_zero() -> None:
@@ -24,7 +24,7 @@ def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) ->
         captured["claude_args"] = claude_args
         return 0
 
-    monkeypatch.setattr("claude_warmer.cli.run_launcher", recorder)
+    monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
 
     result = CliRunner().invoke(
         main,
@@ -52,7 +52,7 @@ def test_passthrough_without_double_dash(monkeypatch: pytest.MonkeyPatch) -> Non
         captured["claude_args"] = claude_args
         return 0
 
-    monkeypatch.setattr("claude_warmer.cli.run_launcher", recorder)
+    monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
 
     result = CliRunner().invoke(main, ["chat", "-p", "hi"])
 

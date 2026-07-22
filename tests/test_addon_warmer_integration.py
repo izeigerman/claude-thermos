@@ -3,10 +3,10 @@ from pathlib import Path
 
 import httpx
 
-from claude_warmer.config import Config
-from claude_warmer.eventlog import EventLog
-from claude_warmer.lineage import LineageId
-from claude_warmer.proxy import WarmerAddon
+from claude_thermos.config import Config
+from claude_thermos.eventlog import EventLog
+from claude_thermos.lineage import LineageId
+from claude_thermos.proxy import WarmerAddon
 
 
 def _body(model: str, tool_count: int, session_id: str, system: str = "system prompt") -> dict:

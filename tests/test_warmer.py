@@ -4,11 +4,11 @@ from pathlib import Path
 
 import httpx
 
-from claude_warmer.config import Config
-from claude_warmer.eventlog import EventLog
-from claude_warmer.lineage import LineageId
-from claude_warmer.state import SessionState
-from claude_warmer.warmer import Warmer, build_warm_request
+from claude_thermos.config import Config
+from claude_thermos.eventlog import EventLog
+from claude_thermos.lineage import LineageId
+from claude_thermos.state import SessionState
+from claude_thermos.warmer import Warmer, build_warm_request
 
 
 def _body(model: str, tool_count: int, system: str = "system prompt") -> dict:

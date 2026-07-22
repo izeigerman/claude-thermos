@@ -1,6 +1,6 @@
 import json
 
-from claude_warmer.usage import Usage, parse_usage_json, parse_usage_sse
+from claude_thermos.usage import Usage, parse_usage_json, parse_usage_sse
 
 
 def _sse_event(event: str, data: dict) -> bytes:

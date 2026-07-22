@@ -3,16 +3,16 @@ import socket
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from claude_warmer.eventlog import EventLog
-from claude_warmer.lineage import LineageId
-from claude_warmer.proxy import (
+from claude_thermos.eventlog import EventLog
+from claude_thermos.lineage import LineageId
+from claude_thermos.proxy import (
     WarmerAddon,
     build_master,
     find_free_port,
     _handle_request,
     _handle_response,
 )
-from claude_warmer.state import SessionState
+from claude_thermos.state import SessionState
 
 
 def test_find_free_port_bindable() -> None:

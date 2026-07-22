@@ -1,6 +1,6 @@
 import pytest
 
-from claude_warmer.config import Config, build_config
+from claude_thermos.config import Config, build_config
 
 
 def test_build_config_defaults() -> None:

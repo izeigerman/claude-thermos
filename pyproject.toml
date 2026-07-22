@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claude-warmer"
+name = "claude-thermos"
 version = "0.1.0"
 description = "Keeps your Claude session warm for you."
 requires-python = ">=3.11"
@@ -13,7 +13,7 @@ dependencies = ["mitmproxy", "click", "httpx"]
 dev = ["pytest", "pytest-asyncio", "ruff", "ty"]
 
 [project.scripts]
-claude-warmer = "claude_warmer.cli:main"
+claude-thermos = "claude_thermos.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

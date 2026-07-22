@@ -6,7 +6,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, TextIO
 
-from claude_warmer.lineage import LineageId
+from claude_thermos.lineage import LineageId
 
 
 class EventType(StrEnum):
@@ -44,7 +44,7 @@ class EventLog:
     """
 
     def __init__(self, session_id: str, root: Path | None = None) -> None:
-        root = root if root is not None else Path.home() / ".claude-warmer" / "logs"
+        root = root if root is not None else Path.home() / ".claude-thermos" / "logs"
         self._session_id = session_id
         self._session_dir = root / session_id
         self._session_dir.mkdir(parents=True, exist_ok=True)

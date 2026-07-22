@@ -1,5 +1,5 @@
-from claude_warmer.lineage import LineageId
-from claude_warmer.state import SessionState
+from claude_thermos.lineage import LineageId
+from claude_thermos.state import SessionState
 
 
 def _body(model: str, tool_count: int, system: str = "system prompt") -> dict:

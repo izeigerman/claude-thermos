@@ -4,9 +4,9 @@ from typing import Never
 
 import pytest
 
-from claude_warmer.config import Config
-from claude_warmer.launcher import RealProxyHandle, child_env, run_launcher
-from claude_warmer.proxy import find_free_port
+from claude_thermos.config import Config
+from claude_thermos.launcher import RealProxyHandle, child_env, run_launcher
+from claude_thermos.proxy import find_free_port
 
 
 def test_child_env_sets_base_url() -> None:

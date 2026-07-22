@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from claude_warmer.eventlog import EventLog, EventType
-from claude_warmer.lineage import LineageId
+from claude_thermos.eventlog import EventLog, EventType
+from claude_thermos.lineage import LineageId
 
 
 def test_emit_writes_one_json_line_per_event(tmp_path: Path) -> None:
