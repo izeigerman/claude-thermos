@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from claude_thermos.eventlog import EventLog, EventType
+from claude_thermos.eventlog import EventLog, EventType, EventWriter
 from claude_thermos.lineage import LineageId
 
 
@@ -64,3 +64,22 @@ def test_close_writes_summary_with_rollup_totals(tmp_path: Path) -> None:
 
     summary = json.loads((tmp_path / "sess-5" / "summary.json").read_text())
     assert summary == {"warms_fired": 2, "cache_read_total": 350}
+
+
+def test_shared_writer_serves_multiple_sessions(tmp_path: Path) -> None:
+    writer = EventWriter()
+    log_a = EventLog("sess-a", root=tmp_path, writer=writer)
+    log_b = EventLog("sess-b", root=tmp_path, writer=writer)
+
+    log_a.emit(EventType.SESSION_START, LineageId("lineage-a"))
+    log_b.emit(EventType.SESSION_START, LineageId("lineage-b"))
+    log_a.emit(EventType.WARM_FIRED, LineageId("lineage-a"), cycle=1)
+
+    log_a.close()
+    log_b.close()
+    writer.close()
+
+    events_a = (tmp_path / "sess-a" / "events.jsonl").read_text().splitlines()
+    events_b = (tmp_path / "sess-b" / "events.jsonl").read_text().splitlines()
+    assert [json.loads(line)["event"] for line in events_a] == ["session_start", "warm_fired"]
+    assert [json.loads(line)["event"] for line in events_b] == ["session_start"]

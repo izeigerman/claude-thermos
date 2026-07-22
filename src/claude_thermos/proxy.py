@@ -11,7 +11,7 @@ from mitmproxy.options import Options
 from mitmproxy.tools.dump import DumpMaster
 
 from claude_thermos.config import ANTHROPIC_BASE_URL, Config
-from claude_thermos.eventlog import EventLog, EventType
+from claude_thermos.eventlog import EventLog, EventType, EventWriter
 from claude_thermos.lineage import LineageId, extract_session_id
 from claude_thermos.state import SessionState
 from claude_thermos.usage import Usage, parse_usage_json, parse_usage_sse
@@ -195,15 +195,25 @@ class WarmerAddon:
     Unless warming is disabled, the addon owns a Warmer and a background
     task started from mitmproxy's `running` hook (on the proxy event loop)
     that polls the active sessions. On shutdown the task is cancelled, each
-    session's summary is written, and its event log is closed."""
+    session's summary is written, and its event log is closed.
+
+    All sessions share a single EventWriter thread so N concurrent sessions
+    cost one writer thread rather than N. When a custom eventlog_factory is
+    supplied (in tests) it owns its logs' writers instead, and the addon
+    creates no shared writer."""
 
     def __init__(
         self,
         config: Config | None = None,
-        eventlog_factory: Callable[[str], EventLog] = EventLog,
+        eventlog_factory: Callable[[str], EventLog] | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self._config = config if config is not None else Config()
+        if eventlog_factory is None:
+            self._event_writer: EventWriter | None = EventWriter()
+            eventlog_factory = lambda sid: EventLog(sid, writer=self._event_writer)  # noqa: E731
+        else:
+            self._event_writer = None
         self._eventlog_factory = eventlog_factory
         self._sessions: dict[str, _Session] = {}
         self._warmer: Warmer | None = None
@@ -282,8 +292,9 @@ class WarmerAddon:
         """Handle mitmproxy's addon shutdown hook.
 
         Cancels the warming task, then for each session emits a session_end
-        event and closes the event log, which drains its writer's queue to
-        disk and writes summary.json with the rollup totals.
+        event and closes the event log, which flushes its records to disk and
+        writes summary.json with the rollup totals. Finally shuts down the
+        shared writer thread, if the addon owns one.
         """
         if self._warmer_task is not None:
             self._warmer_task.cancel()
@@ -292,6 +303,8 @@ class WarmerAddon:
             main_id = session.state.main_lineage_id() or LineageId("")
             session.eventlog.emit(EventType.SESSION_END, lineage_id=main_id)
             session.eventlog.close()
+        if self._event_writer is not None:
+            self._event_writer.close()
 
     def _get_or_create_session(self, session_id: str) -> _Session:
         session = self._sessions.get(session_id)
