@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-thermos"
-version = "0.1.1"
+version = "0.1.2"
 description = "Keeps your Claude session warm for you."
 authors = [{ name = "Iaroslav Zeigerman", email = "zeigerman.ia@gmail.com" }]
 license = "MIT"
