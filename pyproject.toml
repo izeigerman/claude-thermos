@@ -6,6 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "claude-thermos"
 version = "0.1.0"
 description = "Keeps your Claude session warm for you."
+authors = [{ name = "Iaroslav Zeigerman", email = "zeigerman.ia@gmail.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = ["mitmproxy", "click", "httpx"]
 
