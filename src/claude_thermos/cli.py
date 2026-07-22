@@ -1,5 +1,6 @@
 import os
 import sys
+from importlib.metadata import version
 
 import click
 
@@ -12,6 +13,7 @@ __all__ = ["main"]
 @click.command(
     context_settings={"ignore_unknown_options": True, "help_option_names": ["-h", "--help"]}
 )
+@click.version_option(version("claude-thermos"), "-V", "--version")
 @click.option(
     "--idle",
     "idle_threshold_sec",
@@ -34,7 +36,7 @@ __all__ = ["main"]
     "-n",
     "--max-cycles",
     "max_cycles_raw",
-    default="2",
+    default="4",
     show_default=True,
     envvar="CLAUDE_WARMER_WARM_MAX_CYCLES",
     help='Maximum number of warming cycles, or "auto" for unlimited.',
