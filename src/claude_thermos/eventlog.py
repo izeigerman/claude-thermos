@@ -9,6 +9,14 @@ from typing import Any, TextIO
 
 from claude_thermos.lineage import LineageId
 
+# Anthropic prompt-cache pricing, as multiples of the base input token price.
+# A warm keeps the main lineage's prefix alive with a cache read; without it the
+# prefix expires and the next real request pays a cache write to rebuild it. The
+# warmer refreshes under the 5-minute TTL, so the avoided write is the 5-minute
+# rate (1-hour writes are 2x). See Anthropic prompt-caching docs.
+_CACHE_READ_PRICE_MULT = 0.1
+_CACHE_WRITE_PRICE_MULT = 1.25
+
 
 class EventType(StrEnum):
     """Names of the structured events written to the event log. As a
@@ -150,6 +158,9 @@ class EventLog:
         self._file: TextIO = (self._session_dir / "events.jsonl").open("a")
         self._warms_fired = 0
         self._cache_read_total = 0
+        self._episodes = 0
+        self._rewrite_avoided_tokens = 0
+        self._episode_prefix_tokens = 0
         self._owns_writer = writer is None
         self._writer = writer if writer is not None else EventWriter()
 
@@ -157,14 +168,36 @@ class EventLog:
         if event is EventType.WARM_FIRED:
             self._warms_fired += 1
         elif event is EventType.WARM_RESULT:
-            self._cache_read_total += fields.get("usage", {}).get("cache_read", 0)
+            cache_read = fields.get("usage", {}).get("cache_read", 0)
+            self._cache_read_total += cache_read
+            self._episode_prefix_tokens = cache_read
+        elif event is EventType.RESUME_DETECTED and self._episode_prefix_tokens:
+            self._episodes += 1
+            self._rewrite_avoided_tokens += self._episode_prefix_tokens
+            self._episode_prefix_tokens = 0
         record = {"ts": round(time.time(), 3), "event": event, "lineage_id": lineage_id, **fields}
         self._writer.write(self._file, json.dumps(record) + "\n")
 
     def _write_summary(self) -> None:
+        """Write summary.json with rollup totals and the cache-warming payoff.
+
+        net_savings is rewrite_avoided_cost minus warm_cost, both priced in
+        base-input-token units (tokens weighted by their cache multiplier).
+        warm_cost is the cache-read rate paid on every warm (cache_read_total);
+        rewrite_avoided_cost is one cache write per episode (rewrite_avoided_tokens),
+        each sized by that episode's last warmed prefix. net_savings goes negative
+        when a session warms more than the avoided rewrites are worth.
+        """
+        warm_cost = _CACHE_READ_PRICE_MULT * self._cache_read_total
+        rewrite_avoided_cost = _CACHE_WRITE_PRICE_MULT * self._rewrite_avoided_tokens
         summary = {
             "warms_fired": self._warms_fired,
             "cache_read_total": self._cache_read_total,
+            "rewrite_avoided_tokens": self._rewrite_avoided_tokens,
+            "episodes": self._episodes,
+            "warm_cost": round(warm_cost, 1),
+            "rewrite_avoided_cost": round(rewrite_avoided_cost, 1),
+            "net_savings": round(rewrite_avoided_cost - warm_cost, 1),
         }
         (self._session_dir / "summary.json").write_text(json.dumps(summary))
 

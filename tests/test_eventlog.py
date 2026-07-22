@@ -60,10 +60,65 @@ def test_close_writes_summary_with_rollup_totals(tmp_path: Path) -> None:
     log.emit(EventType.WARM_RESULT, lineage, cycle=1, usage={"cache_read": 100})
     log.emit(EventType.WARM_FIRED, lineage, cycle=2)
     log.emit(EventType.WARM_RESULT, lineage, cycle=2, usage={"cache_read": 250})
+    log.emit(EventType.RESUME_DETECTED, lineage)
     log.close()
 
     summary = json.loads((tmp_path / "sess-5" / "summary.json").read_text())
-    assert summary == {"warms_fired": 2, "cache_read_total": 350}
+    assert summary == {
+        "warms_fired": 2,
+        "cache_read_total": 350,
+        # one avoided rewrite, sized by the last warmed prefix
+        "rewrite_avoided_tokens": 250,
+        "episodes": 1,
+        "warm_cost": 35.0,  # 0.1 * 350
+        "rewrite_avoided_cost": 312.5,  # 1.25 * 250
+        "net_savings": 277.5,  # 312.5 - 35.0
+    }
+
+
+def test_summary_negative_when_episode_never_resumes(tmp_path: Path) -> None:
+    log = EventLog("sess-6", root=tmp_path)
+    lineage = LineageId("lineage-a")
+    log.emit(EventType.WARM_FIRED, lineage, cycle=1)
+    log.emit(EventType.WARM_RESULT, lineage, cycle=1, usage={"cache_read": 100})
+    log.close()
+
+    summary = json.loads((tmp_path / "sess-6" / "summary.json").read_text())
+    # Warmed but the main lineage never resumed, so the warm cost bought no
+    # avoided rewrite: net savings is negative.
+    assert summary == {
+        "warms_fired": 1,
+        "cache_read_total": 100,
+        "rewrite_avoided_tokens": 0,
+        "episodes": 0,
+        "warm_cost": 10.0,  # 0.1 * 100
+        "rewrite_avoided_cost": 0.0,
+        "net_savings": -10.0,
+    }
+
+
+def test_summary_accumulates_avoided_rewrite_per_episode(tmp_path: Path) -> None:
+    log = EventLog("sess-7", root=tmp_path)
+    lineage = LineageId("lineage-a")
+    log.emit(EventType.WARM_FIRED, lineage, cycle=1)
+    log.emit(EventType.WARM_RESULT, lineage, cycle=1, usage={"cache_read": 200})
+    log.emit(EventType.RESUME_DETECTED, lineage)
+    log.emit(EventType.WARM_FIRED, lineage, cycle=1)
+    log.emit(EventType.WARM_RESULT, lineage, cycle=1, usage={"cache_read": 400})
+    log.emit(EventType.RESUME_DETECTED, lineage)
+    log.close()
+
+    summary = json.loads((tmp_path / "sess-7" / "summary.json").read_text())
+    assert summary == {
+        "warms_fired": 2,
+        "cache_read_total": 600,
+        # one avoided rewrite per episode: 200 + 400
+        "rewrite_avoided_tokens": 600,
+        "episodes": 2,
+        "warm_cost": 60.0,  # 0.1 * 600
+        "rewrite_avoided_cost": 750.0,  # 1.25 * 600
+        "net_savings": 690.0,  # 750.0 - 60.0
+    }
 
 
 def test_shared_writer_serves_multiple_sessions(tmp_path: Path) -> None:
