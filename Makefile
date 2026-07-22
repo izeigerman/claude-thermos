@@ -1,7 +1,10 @@
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: install lint format fmt-check typecheck test check style style-check
+.PHONY: clean install build publish lint format typecheck test style style-check
+
+clean:
+	rm -rf dist/
 
 install:
 	uv sync --all-packages --all-extras --inexact
@@ -9,7 +12,7 @@ install:
 build: install
 	uv build
 
-publish: build
+publish: clean build
 	uv publish
 
 lint:
