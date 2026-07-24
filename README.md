@@ -24,6 +24,48 @@ Tuning (all optional):
 | `--max-cycles`      | `4`     | Max warms per idle episode (`auto` for unlimited)           |
 | `--subagent-window` | `540`   | Seconds a subagent counts as "still active"                 |
 
+## Daemon mode (shared proxy for the IDE and multiple terminals)
+
+The default command warms only the `claude` process it launches. Clients that
+launch `claude` themselves — the **VSCode/Claude Code extension**, which spawns
+its own bundled binary — never go through it, and neither do other terminals.
+
+`claude-thermos serve` runs the warming proxy as a **standalone daemon** on a
+fixed loopback port. Point any client at it and they all share one warmer:
+
+```bash
+claude-thermos serve --port 8787          # run the daemon (Ctrl-C / SIGTERM to stop)
+
+# then, for any client:
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
+claude -p "fix the bug"                    # terminal — warmed by the daemon
+```
+
+For the VSCode extension, make sure its process inherits that environment
+variable (on macOS, `launchctl setenv ANTHROPIC_BASE_URL http://127.0.0.1:8787`
+before launching the app; or export it in the shell you start the editor from).
+The extension honors `ANTHROPIC_BASE_URL`, so its traffic then flows through the
+daemon and its main agent stays warm while subagents run.
+
+The daemon observes traffic exactly like the launcher and already tracks many
+sessions at once, so a single daemon serves every client on the machine. It
+evicts sessions idle longer than `--session-ttl` (default `3600s`) so it can run
+indefinitely.
+
+Tuning: `serve` accepts the same `--idle/--interval/--max-cycles/--subagent-window`
+flags as the default command, plus:
+
+| Flag            | Default                     | Meaning                                       |
+|-----------------|-----------------------------|-----------------------------------------------|
+| `--port`        | `8787`                      | Loopback port the daemon listens on           |
+| `--upstream`    | `https://api.anthropic.com` | Real API the proxy reverse-proxies to         |
+| `--session-ttl` | `3600`                      | Seconds a session may sit idle before eviction|
+
+> **Caveat:** `--upstream` must be the real API, never the daemon's own loopback
+> address — otherwise the proxy would forward to itself. `serve` rejects a
+> loopback upstream, so if you export `ANTHROPIC_BASE_URL` globally, still start
+> the daemon with an explicit `--upstream https://api.anthropic.com`.
+
 ## Why your cache keeps expiring
 
 Claude Code's prompt cache uses a **5-minute TTL**. Every turn, your whole conversation history is served from cache at **0.1x** the input price instead of being re-sent at full price, as long as the cache stays alive.

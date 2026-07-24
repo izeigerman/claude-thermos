@@ -72,12 +72,15 @@ def test_serve_dispatches_to_run_server(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setattr("claude_thermos.cli.run_server", recorder)
 
-    result = CliRunner().invoke(main, ["serve", "--port", "9000", "--idle", "120"])
+    result = CliRunner().invoke(
+        main, ["serve", "--port", "9000", "--idle", "120", "--session-ttl", "1800"]
+    )
 
     assert result.exit_code == 0
     assert captured["port"] == 9000
     assert captured["upstream"] == "https://api.anthropic.com"
     assert captured["config"].idle_threshold_sec == 120
+    assert captured["config"].session_ttl_sec == 1800
 
 
 def test_serve_rejects_loopback_upstream() -> None:

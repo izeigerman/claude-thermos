@@ -1,6 +1,7 @@
 import os
 import sys
 from collections.abc import Callable
+from dataclasses import replace
 from importlib.metadata import version
 
 import click
@@ -138,6 +139,15 @@ def launch(
     envvar="CLAUDE_WARMER_UPSTREAM",
     help="Real upstream Anthropic API URL to reverse-proxy to.",
 )
+@click.option(
+    "--session-ttl",
+    "session_ttl_sec",
+    type=int,
+    default=3600,
+    show_default=True,
+    envvar="CLAUDE_WARMER_SESSION_TTL_SEC",
+    help="Seconds a session may sit idle before the daemon evicts it.",
+)
 def serve(
     idle_threshold_sec: int,
     warm_interval_sec: int,
@@ -145,6 +155,7 @@ def serve(
     subagent_active_window_sec: int,
     port: int,
     upstream: str,
+    session_ttl_sec: int,
 ) -> None:
     """Run the cache-warming proxy as a standalone daemon.
 
@@ -157,7 +168,8 @@ def serve(
             f"must be the real Anthropic API, not a loopback URL: {upstream}",
             param_hint="--upstream",
         )
-    config = _build(
-        idle_threshold_sec, warm_interval_sec, max_cycles_raw, subagent_active_window_sec
+    config = replace(
+        _build(idle_threshold_sec, warm_interval_sec, max_cycles_raw, subagent_active_window_sec),
+        session_ttl_sec=session_ttl_sec,
     )
     sys.exit(run_server(config, port, upstream))
