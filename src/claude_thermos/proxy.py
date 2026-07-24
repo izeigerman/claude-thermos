@@ -365,7 +365,11 @@ class WarmerAddon:
         """
         while True:
             await asyncio.sleep(poll_interval_sec)
-            self._evict_stale(time.time())
+            try:
+                self._evict_stale(time.time())
+            except Exception:
+                # Best-effort eviction: keep the reaper alive even if one session teardown fails.
+                continue
 
     def _get_or_create_session(self, session_id: str) -> _Session:
         session = self._sessions.get(session_id)
