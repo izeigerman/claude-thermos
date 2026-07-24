@@ -109,6 +109,26 @@ def test_disabled_skips_warmer(tmp_path: Path) -> None:
     assert addon._warmer is None
 
 
+async def test_launcher_mode_does_not_start_reaper(tmp_path: Path) -> None:
+    addon = WarmerAddon(
+        config=Config(disabled=True),
+        eventlog_factory=lambda sid: EventLog(sid, root=tmp_path),
+    )
+    addon.running()
+    assert addon._reaper_task is None
+
+
+async def test_daemon_mode_starts_reaper(tmp_path: Path) -> None:
+    addon = WarmerAddon(
+        config=Config(disabled=True),
+        eventlog_factory=lambda sid: EventLog(sid, root=tmp_path),
+        reap_sessions=True,
+    )
+    addon.running()
+    assert addon._reaper_task is not None
+    addon._reaper_task.cancel()
+
+
 def test_reaper_evicts_idle_session(tmp_path: Path) -> None:
     config = Config(
         idle_threshold_sec=270,
@@ -119,6 +139,7 @@ def test_reaper_evicts_idle_session(tmp_path: Path) -> None:
     addon = WarmerAddon(
         config=config,
         eventlog_factory=lambda sid: EventLog(sid, root=tmp_path),
+        reap_sessions=True,
     )
     addon._get_or_create_session("sess-1")
     _seed_idle_with_subagent(addon)  # last activity at t=100

@@ -212,6 +212,7 @@ class WarmerAddon:
         eventlog_factory: Callable[[str], EventLog] | None = None,
         client: httpx.AsyncClient | None = None,
         upstream: str | None = None,
+        reap_sessions: bool = False,
     ) -> None:
         self._config = config if config is not None else Config()
         if eventlog_factory is None:
@@ -225,6 +226,9 @@ class WarmerAddon:
         if not self._config.disabled:
             base_url = upstream if upstream is not None else ANTHROPIC_BASE_URL
             self._warmer = Warmer(self._config, base_url=base_url, client=client)
+        # Session eviction is only for the long-lived daemon; the launcher
+        # process dies with claude, so its default behavior stays unchanged.
+        self._reap_sessions = reap_sessions
         self._warmer_task: asyncio.Task | None = None
         self._reaper_task: asyncio.Task | None = None
 
@@ -239,12 +243,13 @@ class WarmerAddon:
     def running(self) -> None:
         """Handle mitmproxy's startup hook on the proxy event loop.
 
-        Starts the background warming task (unless warming is disabled) and
-        the session reaper that evicts long-idle sessions.
+        Starts the background warming task (unless warming is disabled). In
+        daemon mode it also starts the session reaper that evicts long-idle
+        sessions; the launcher never reaps, keeping its behavior unchanged.
         """
         if self._warmer is not None and self._warmer_task is None:
             self._warmer_task = asyncio.create_task(self._warmer.run(self.active_sessions))
-        if self._reaper_task is None:
+        if self._reap_sessions and self._reaper_task is None:
             self._reaper_task = asyncio.create_task(self._reap())
 
     def request(self, flow: FlowLike) -> None:

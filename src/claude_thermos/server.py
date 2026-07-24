@@ -61,7 +61,7 @@ def run_server(
     if is_loopback_url(upstream):
         raise ValueError(f"upstream must be the real Anthropic API, not a loopback URL: {upstream}")
 
-    addon = WarmerAddon(config=config, upstream=upstream)
+    addon = WarmerAddon(config=config, upstream=upstream, reap_sessions=True)
     proxy = proxy_factory(port, addon, upstream)
     proxy.start()
     try:
