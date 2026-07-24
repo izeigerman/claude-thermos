@@ -63,8 +63,8 @@ def run_server(
 
     addon = WarmerAddon(config=config, upstream=upstream, reap_sessions=True)
     proxy = proxy_factory(port, addon, upstream)
-    proxy.start()
     try:
+        proxy.start()
         wait()
     finally:
         proxy.stop()

@@ -66,6 +66,27 @@ def test_run_server_stops_proxy_on_wait_error() -> None:
     assert handle.stop_calls == 1
 
 
+def test_run_server_stops_proxy_when_start_fails() -> None:
+    class _FailingStartHandle(_FakeProxyHandle):
+        def start(self) -> Never:
+            self.start_calls += 1
+            raise RuntimeError("bind failed")
+
+    handle = _FailingStartHandle(8787, None, "https://api.anthropic.com")
+
+    with pytest.raises(RuntimeError, match="bind failed"):
+        run_server(
+            Config(),
+            8787,
+            "https://api.anthropic.com",
+            proxy_factory=lambda port, addon, upstream: handle,
+            wait=lambda: None,
+        )
+
+    assert handle.start_calls == 1
+    assert handle.stop_calls == 1
+
+
 def test_run_server_rejects_loopback_upstream() -> None:
     started = []
 
