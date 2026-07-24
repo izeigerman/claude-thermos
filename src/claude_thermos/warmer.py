@@ -222,6 +222,17 @@ class Warmer:
         episode.cap_emitted = False
         episode.main_request_count = None
 
+    def forget(self, session_id: str) -> None:
+        """Drop any per-session episode state for `session_id`.
+
+        Called when a session is evicted so its episode entry does not leak
+        for the life of a long-running daemon.
+
+        Args:
+            session_id: The session to forget.
+        """
+        self._episodes.pop(session_id, None)
+
     async def run(
         self,
         sessions_provider: Callable[[], Iterable[tuple[SessionState, EventLog]]],

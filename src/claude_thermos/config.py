@@ -40,6 +40,10 @@ class Config:
     warm_max_cycles: int | None = 2
     subagent_active_window_sec: int = 540
     disabled: bool = False
+    # How long a session may sit idle before a detached proxy evicts it.
+    # Unused by the launcher (its process dies with claude); only the daemon
+    # runs long enough to accumulate stale sessions.
+    session_ttl_sec: int = 3600
 
 
 def _parse_max_cycles(value: int | str) -> int | None:

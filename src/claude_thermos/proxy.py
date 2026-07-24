@@ -19,6 +19,9 @@ from claude_thermos.warmer import Warmer
 
 MESSAGES_PATH = "/v1/messages"
 
+# How often the detached-proxy session reaper scans for idle sessions to evict.
+_REAP_INTERVAL_SEC = 60.0
+
 
 def find_free_port() -> int:
     """Find a free TCP port on the loopback interface.
@@ -223,6 +226,7 @@ class WarmerAddon:
             base_url = upstream if upstream is not None else ANTHROPIC_BASE_URL
             self._warmer = Warmer(self._config, base_url=base_url, client=client)
         self._warmer_task: asyncio.Task | None = None
+        self._reaper_task: asyncio.Task | None = None
 
     def active_sessions(self) -> list[tuple[SessionState, EventLog]]:
         """Return the active (SessionState, EventLog) pairs.
@@ -235,10 +239,13 @@ class WarmerAddon:
     def running(self) -> None:
         """Handle mitmproxy's startup hook on the proxy event loop.
 
-        Starts the background warming task unless warming is disabled.
+        Starts the background warming task (unless warming is disabled) and
+        the session reaper that evicts long-idle sessions.
         """
         if self._warmer is not None and self._warmer_task is None:
             self._warmer_task = asyncio.create_task(self._warmer.run(self.active_sessions))
+        if self._reaper_task is None:
+            self._reaper_task = asyncio.create_task(self._reap())
 
     def request(self, flow: FlowLike) -> None:
         """Handle a mitmproxy request hook.
@@ -294,20 +301,62 @@ class WarmerAddon:
     def done(self) -> None:
         """Handle mitmproxy's addon shutdown hook.
 
-        Cancels the warming task, then for each session emits a session_end
-        event and closes the event log, which flushes its records to disk and
-        writes summary.json with the rollup totals. Finally shuts down the
-        shared writer thread, if the addon owns one.
+        Cancels the warming and reaper tasks, then for each remaining session
+        emits a session_end event and closes the event log, which flushes its
+        records to disk and writes summary.json with the rollup totals.
+        Finally shuts down the shared writer thread, if the addon owns one.
         """
         if self._warmer_task is not None:
             self._warmer_task.cancel()
             self._warmer_task = None
-        for session in self._sessions.values():
-            main_id = session.state.main_lineage_id() or LineageId("")
-            session.eventlog.emit(EventType.SESSION_END, lineage_id=main_id)
-            session.eventlog.close()
+        if self._reaper_task is not None:
+            self._reaper_task.cancel()
+            self._reaper_task = None
+        for session_id in list(self._sessions):
+            self._evict_session(session_id)
         if self._event_writer is not None:
             self._event_writer.close()
+
+    def _evict_session(self, session_id: str) -> None:
+        """Tear down a single session: emit session_end, close its log, and
+        forget its warmer episode. Idempotent; a no-op if already gone.
+
+        Args:
+            session_id: The session to evict.
+        """
+        session = self._sessions.pop(session_id, None)
+        if session is None:
+            return
+        main_id = session.state.main_lineage_id() or LineageId("")
+        session.eventlog.emit(EventType.SESSION_END, lineage_id=main_id)
+        session.eventlog.close()
+        if self._warmer is not None:
+            self._warmer.forget(session_id)
+
+    def _evict_stale(self, now: float) -> None:
+        """Evict every session idle for at least session_ttl_sec.
+
+        Args:
+            now: Current time, in seconds.
+        """
+        ttl = self._config.session_ttl_sec
+        stale = [
+            session_id
+            for session_id, session in self._sessions.items()
+            if now - session.state.last_activity() >= ttl
+        ]
+        for session_id in stale:
+            self._evict_session(session_id)
+
+    async def _reap(self, poll_interval_sec: float = _REAP_INTERVAL_SEC) -> None:
+        """Poll on an interval, evicting long-idle sessions. Stops on cancel.
+
+        Args:
+            poll_interval_sec: Seconds to sleep between reaping scans.
+        """
+        while True:
+            await asyncio.sleep(poll_interval_sec)
+            self._evict_stale(time.time())
 
     def _get_or_create_session(self, session_id: str) -> _Session:
         session = self._sessions.get(session_id)

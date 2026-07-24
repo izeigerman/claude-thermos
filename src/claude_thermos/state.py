@@ -123,3 +123,18 @@ class SessionState:
             if now - max(state.last_request_sent, state.last_response_end) < window_sec:
                 return True
         return False
+
+    def last_activity(self) -> float:
+        """Return the most recent request-or-response time across all lineages.
+
+        Used to evict long-idle sessions in a detached (daemon) proxy, where
+        sessions would otherwise accumulate for the life of the process.
+
+        Returns:
+            The max of last_request_sent and last_response_end over every
+            lineage, or float("-inf") if no lineage has been seen.
+        """
+        activity = float("-inf")
+        for state in self._lineages.values():
+            activity = max(activity, state.last_request_sent, state.last_response_end)
+        return activity

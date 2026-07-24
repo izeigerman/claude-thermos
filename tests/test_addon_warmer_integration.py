@@ -7,6 +7,7 @@ from claude_thermos.config import Config
 from claude_thermos.eventlog import EventLog
 from claude_thermos.lineage import LineageId
 from claude_thermos.proxy import WarmerAddon
+from claude_thermos.warmer import _Episode
 
 
 def _body(model: str, tool_count: int, session_id: str, system: str = "system prompt") -> dict:
@@ -106,3 +107,35 @@ def test_disabled_skips_warmer(tmp_path: Path) -> None:
         eventlog_factory=lambda sid: EventLog(sid, root=tmp_path),
     )
     assert addon._warmer is None
+
+
+def test_reaper_evicts_idle_session(tmp_path: Path) -> None:
+    config = Config(
+        idle_threshold_sec=270,
+        warm_interval_sec=270,
+        warm_max_cycles=2,
+        session_ttl_sec=1000,
+    )
+    addon = WarmerAddon(
+        config=config,
+        eventlog_factory=lambda sid: EventLog(sid, root=tmp_path),
+    )
+    addon._get_or_create_session("sess-1")
+    _seed_idle_with_subagent(addon)  # last activity at t=100
+    assert addon._warmer is not None
+    addon._warmer._episodes["sess-1"] = _Episode()  # would leak without forget()
+
+    # Not stale yet: 999s < ttl.
+    addon._evict_stale(now=100 + 999)
+    assert "sess-1" in addon._sessions
+
+    # Stale: 1000s >= ttl.
+    addon._evict_stale(now=100 + 1000)
+    assert "sess-1" not in addon._sessions
+    assert "sess-1" not in addon._warmer._episodes
+
+    names = [e["event"] for e in _read_events(tmp_path)]
+    assert "session_end" in names
+    assert (tmp_path / "sess-1" / "summary.json").exists()
+
+    addon.done()  # idempotent: the evicted session is not torn down twice
