@@ -142,7 +142,7 @@ def launch(
 @click.option(
     "--session-ttl",
     "session_ttl_sec",
-    type=int,
+    type=click.IntRange(min=1),
     default=3600,
     show_default=True,
     envvar="CLAUDE_WARMER_SESSION_TTL_SEC",

@@ -90,6 +90,14 @@ def test_serve_rejects_loopback_upstream() -> None:
     assert "loopback" in result.output
 
 
+@pytest.mark.parametrize("ttl", ["0", "-5"])
+def test_serve_rejects_nonpositive_session_ttl(ttl: str) -> None:
+    result = CliRunner().invoke(main, ["serve", "--session-ttl", ttl])
+
+    assert result.exit_code != 0
+    assert "session-ttl" in result.output.lower()
+
+
 def test_serve_is_not_swallowed_by_passthrough(monkeypatch: pytest.MonkeyPatch) -> None:
     """The literal first token `serve` must select the daemon, not claude."""
     monkeypatch.setattr(
