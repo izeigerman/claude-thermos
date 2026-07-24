@@ -1,3 +1,4 @@
+import ipaddress
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -15,14 +16,14 @@ DEFAULT_UPSTREAM = "https://api.anthropic.com"
 # proxy and the warmer always agree on the same endpoint.
 ANTHROPIC_BASE_URL = os.environ.get("ANTHROPIC_BASE_URL", DEFAULT_UPSTREAM)
 
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-
 
 def is_loopback_url(url: str) -> bool:
     """Report whether `url`'s host is a loopback address.
 
     Used to reject a detached-proxy upstream that points back at the local
-    proxy, which would make the proxy reverse-proxy to itself.
+    proxy, which would make the proxy reverse-proxy to itself. Matches the
+    whole loopback range (127.0.0.0/8 and ::1), not just 127.0.0.1, plus the
+    literal hostname "localhost".
 
     Args:
         url: The URL to inspect.
@@ -30,7 +31,13 @@ def is_loopback_url(url: str) -> bool:
     Returns:
         True iff the URL's host is a loopback address.
     """
-    return (urlparse(url).hostname or "") in _LOOPBACK_HOSTS
+    host = urlparse(url).hostname or ""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 @dataclass(frozen=True)

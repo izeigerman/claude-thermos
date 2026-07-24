@@ -5,7 +5,13 @@ from claude_thermos.config import Config, build_config, is_loopback_url
 
 @pytest.mark.parametrize(
     "url",
-    ["http://127.0.0.1:8787", "http://localhost:8787", "http://[::1]:8787"],
+    [
+        "http://127.0.0.1:8787",
+        "http://localhost:8787",
+        "http://[::1]:8787",
+        "http://127.0.0.2:8787",
+        "http://127.255.255.254",
+    ],
 )
 def test_is_loopback_url_true(url: str) -> None:
     assert is_loopback_url(url) is True
