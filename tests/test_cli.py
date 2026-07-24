@@ -29,7 +29,7 @@ def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) ->
     result = CliRunner().invoke(
         main,
         ["--idle", "400", "--interval", "999", "--", "chat", "-p", "hi"],
-        env={"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"},
+        env={"CLAUDE_THERMOS_IDLE_THRESHOLD_SEC": "300"},
     )
 
     assert result.exit_code == 0
@@ -38,7 +38,7 @@ def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) ->
     assert captured["config"].subagent_active_window_sec == 540
     assert captured["claude_args"] == ["chat", "-p", "hi"]
 
-    result = CliRunner().invoke(main, [], env={"CLAUDE_WARMER_IDLE_THRESHOLD_SEC": "300"})
+    result = CliRunner().invoke(main, [], env={"CLAUDE_THERMOS_IDLE_THRESHOLD_SEC": "300"})
 
     assert result.exit_code == 0
     assert captured["config"].idle_threshold_sec == 300

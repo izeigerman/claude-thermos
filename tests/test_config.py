@@ -48,6 +48,6 @@ def test_build_config_bad_max_cycles_raises(max_cycles_raw: str) -> None:
 
 
 def test_build_config_disabled_env() -> None:
-    assert build_config(270, 270, "2", 540, {"CLAUDE_WARMER_DISABLE": "1"}).disabled is True
-    assert build_config(270, 270, "2", 540, {"CLAUDE_WARMER_DISABLE": "0"}).disabled is False
+    assert build_config(270, 270, "2", 540, {"CLAUDE_THERMOS_DISABLE": "1"}).disabled is True
+    assert build_config(270, 270, "2", 540, {"CLAUDE_THERMOS_DISABLE": "0"}).disabled is False
     assert build_config(270, 270, "2", 540, {}).disabled is False

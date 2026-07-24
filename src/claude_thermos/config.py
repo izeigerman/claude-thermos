@@ -66,7 +66,7 @@ def _parse_max_cycles(value: int | str) -> int | None:
 
 
 def _is_disabled(environ: Mapping[str, str]) -> bool:
-    raw = environ.get("CLAUDE_WARMER_DISABLE", "")
+    raw = environ.get("CLAUDE_THERMOS_DISABLE", "")
     if not raw:
         return False
     return raw.strip().lower() not in ("0", "false")

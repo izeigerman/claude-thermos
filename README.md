@@ -13,7 +13,7 @@ uvx claude-thermos -p "fix the bug"    # any claude args pass straight through
 
 Requires Python 3.11+ and the `claude` CLI on your `PATH`.
 
-That's it. Warming runs automatically in the background. To disable it for a run without changing the command, set `CLAUDE_WARMER_DISABLE=1`.
+That's it. Warming runs automatically in the background. To disable it for a run without changing the command, set `CLAUDE_THERMOS_DISABLE=1`.
 
 Tuning (all optional):
 

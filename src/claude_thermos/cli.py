@@ -21,7 +21,7 @@ def _warmer_options(func: Callable) -> Callable:
         type=int,
         default=270,
         show_default=True,
-        envvar="CLAUDE_WARMER_IDLE_THRESHOLD_SEC",
+        envvar="CLAUDE_THERMOS_IDLE_THRESHOLD_SEC",
         help="Idle threshold, in seconds, before a warming cycle runs.",
     )(func)
     func = click.option(
@@ -30,7 +30,7 @@ def _warmer_options(func: Callable) -> Callable:
         type=int,
         default=270,
         show_default=True,
-        envvar="CLAUDE_WARMER_WARM_INTERVAL_SEC",
+        envvar="CLAUDE_THERMOS_WARM_INTERVAL_SEC",
         help="Interval, in seconds, between warming cycles.",
     )(func)
     func = click.option(
@@ -39,7 +39,7 @@ def _warmer_options(func: Callable) -> Callable:
         "max_cycles_raw",
         default="4",
         show_default=True,
-        envvar="CLAUDE_WARMER_WARM_MAX_CYCLES",
+        envvar="CLAUDE_THERMOS_WARM_MAX_CYCLES",
         help='Maximum number of warming cycles, or "auto" for unlimited.',
     )(func)
     func = click.option(
@@ -48,7 +48,7 @@ def _warmer_options(func: Callable) -> Callable:
         type=int,
         default=540,
         show_default=True,
-        envvar="CLAUDE_WARMER_SUBAGENT_ACTIVE_WINDOW_SEC",
+        envvar="CLAUDE_THERMOS_SUBAGENT_ACTIVE_WINDOW_SEC",
         help="Subagent active window, in seconds.",
     )(func)
     return func
@@ -129,14 +129,14 @@ def launch(
     type=int,
     default=8787,
     show_default=True,
-    envvar="CLAUDE_WARMER_PORT",
+    envvar="CLAUDE_THERMOS_PORT",
     help="Loopback port the daemon listens on.",
 )
 @click.option(
     "--upstream",
     default=DEFAULT_UPSTREAM,
     show_default=True,
-    envvar="CLAUDE_WARMER_UPSTREAM",
+    envvar="CLAUDE_THERMOS_UPSTREAM",
     help="Real upstream Anthropic API URL to reverse-proxy to.",
 )
 @click.option(
@@ -145,7 +145,7 @@ def launch(
     type=click.IntRange(min=1),
     default=3600,
     show_default=True,
-    envvar="CLAUDE_WARMER_SESSION_TTL_SEC",
+    envvar="CLAUDE_THERMOS_SESSION_TTL_SEC",
     help="Seconds a session may sit idle before the daemon evicts it.",
 )
 def serve(
