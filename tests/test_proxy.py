@@ -32,6 +32,14 @@ def test_build_master_reverse_options() -> None:
     assert master.options.listen_port == port
 
 
+def test_build_master_custom_upstream() -> None:
+    port = find_free_port()
+
+    master = build_master(port, None, upstream="https://example.test")
+
+    assert master.options.mode == ["reverse:https://example.test"]
+
+
 def test_build_master_registers_addon() -> None:
     port = find_free_port()
     sentinel = object()
@@ -39,6 +47,15 @@ def test_build_master_registers_addon() -> None:
     master = build_master(port, sentinel)
 
     assert any(a is sentinel for a in master.addons.chain)
+
+
+def test_warmer_addon_forwards_upstream_to_warmer() -> None:
+    from claude_thermos.config import Config
+
+    addon = WarmerAddon(config=Config(), upstream="https://example.test")
+
+    assert addon._warmer is not None
+    assert addon._warmer._base_url == "https://example.test"
 
 
 _HEADERS = {"authorization": "Bearer abc"}

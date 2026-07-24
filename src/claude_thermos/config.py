@@ -1,13 +1,36 @@
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 _MAX_CYCLES_ERROR = 'max-cycles must be a non-negative integer or "auto"'
 
-# Upstream Anthropic API the proxy reverse-proxies to and warm requests are
-# sent to. Resolved once from the environment so the reverse proxy and the
-# warmer always agree on the same endpoint.
-ANTHROPIC_BASE_URL = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+# The real Anthropic API endpoint, used as the default upstream for the
+# detached proxy so it never depends on (and can never inherit) a client's
+# ANTHROPIC_BASE_URL that points back at the proxy itself.
+DEFAULT_UPSTREAM = "https://api.anthropic.com"
+
+# Upstream Anthropic API the launcher's proxy reverse-proxies to and warm
+# requests are sent to. Resolved once from the environment so the reverse
+# proxy and the warmer always agree on the same endpoint.
+ANTHROPIC_BASE_URL = os.environ.get("ANTHROPIC_BASE_URL", DEFAULT_UPSTREAM)
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def is_loopback_url(url: str) -> bool:
+    """Report whether `url`'s host is a loopback address.
+
+    Used to reject a detached-proxy upstream that points back at the local
+    proxy, which would make the proxy reverse-proxy to itself.
+
+    Args:
+        url: The URL to inspect.
+
+    Returns:
+        True iff the URL's host is a loopback address.
+    """
+    return (urlparse(url).hostname or "") in _LOOPBACK_HOSTS
 
 
 @dataclass(frozen=True)

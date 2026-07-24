@@ -33,21 +33,22 @@ def find_free_port() -> int:
         return sock.getsockname()[1]
 
 
-def build_master(port: int, addon: object | None) -> DumpMaster:
+def build_master(port: int, addon: object | None, upstream: str = ANTHROPIC_BASE_URL) -> DumpMaster:
     """Construct a DumpMaster in reverse-proxy mode. Does not start it.
 
-    Configured in reverse mode to the Anthropic API (or ANTHROPIC_BASE_URL)
-    on 127.0.0.1:<port>, with quiet/no-terminal options.
+    Configured in reverse mode to `upstream` (the real Anthropic API by
+    default) on 127.0.0.1:<port>, with quiet/no-terminal options.
 
     Args:
         port: Loopback port the proxy listens on.
         addon: Addon to register, or None to register nothing.
+        upstream: Upstream base URL to reverse-proxy to.
 
     Returns:
         The configured, unstarted DumpMaster.
     """
     options = Options(
-        mode=[f"reverse:{ANTHROPIC_BASE_URL}"],
+        mode=[f"reverse:{upstream}"],
         listen_host="127.0.0.1",
         listen_port=port,
     )
@@ -207,6 +208,7 @@ class WarmerAddon:
         config: Config | None = None,
         eventlog_factory: Callable[[str], EventLog] | None = None,
         client: httpx.AsyncClient | None = None,
+        upstream: str | None = None,
     ) -> None:
         self._config = config if config is not None else Config()
         if eventlog_factory is None:
@@ -218,7 +220,8 @@ class WarmerAddon:
         self._sessions: dict[str, _Session] = {}
         self._warmer: Warmer | None = None
         if not self._config.disabled:
-            self._warmer = Warmer(self._config, client=client)
+            base_url = upstream if upstream is not None else ANTHROPIC_BASE_URL
+            self._warmer = Warmer(self._config, base_url=base_url, client=client)
         self._warmer_task: asyncio.Task | None = None
 
     def active_sessions(self) -> list[tuple[SessionState, EventLog]]:
