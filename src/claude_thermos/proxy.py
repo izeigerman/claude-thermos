@@ -341,6 +341,9 @@ class WarmerAddon:
     def _evict_stale(self, now: float) -> None:
         """Evict every session idle for at least session_ttl_sec.
 
+        A session with a warm request currently in flight is left alone, so
+        the reaper never closes an event log out from under `Warmer._fire`.
+
         Args:
             now: Current time, in seconds.
         """
@@ -349,6 +352,7 @@ class WarmerAddon:
             session_id
             for session_id, session in self._sessions.items()
             if now - session.state.last_activity() >= ttl
+            and not (self._warmer is not None and self._warmer.is_warming(session_id))
         ]
         for session_id in stale:
             self._evict_session(session_id)
