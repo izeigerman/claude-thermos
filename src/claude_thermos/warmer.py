@@ -222,6 +222,32 @@ class Warmer:
         episode.cap_emitted = False
         episode.main_request_count = None
 
+    def forget(self, session_id: str) -> None:
+        """Drop any per-session episode state for `session_id`.
+
+        Called when a session is evicted so its episode entry does not leak
+        for the life of a long-running daemon.
+
+        Args:
+            session_id: The session to forget.
+        """
+        self._episodes.pop(session_id, None)
+
+    def is_warming(self, session_id: str) -> bool:
+        """Report whether a warm request is currently in flight for a session.
+
+        The reaper consults this so it never closes a session's event log
+        while `_fire` is mid-warm (awaiting the HTTP call, then emitting).
+
+        Args:
+            session_id: The session to check.
+
+        Returns:
+            True iff the session has an episode with a warm in progress.
+        """
+        episode = self._episodes.get(session_id)
+        return episode is not None and episode.in_progress
+
     async def run(
         self,
         sessions_provider: Callable[[], Iterable[tuple[SessionState, EventLog]]],

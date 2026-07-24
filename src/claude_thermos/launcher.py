@@ -7,7 +7,7 @@ from typing import Protocol
 
 from mitmproxy.tools.dump import DumpMaster
 
-from claude_thermos.config import Config
+from claude_thermos.config import ANTHROPIC_BASE_URL, Config
 from claude_thermos.proxy import WarmerAddon, build_master, find_free_port
 
 
@@ -35,14 +35,17 @@ class RealProxyHandle:
     server instances before closing the loop.
     """
 
-    def __init__(self, port: int, addon: object | None = None) -> None:
+    def __init__(
+        self, port: int, addon: object | None = None, upstream: str = ANTHROPIC_BASE_URL
+    ) -> None:
         self._port = port
         self._addon = addon
+        self._upstream = upstream
         self._master: DumpMaster | None = None
         self._thread: threading.Thread | None = None
 
     def start(self) -> None:
-        master = build_master(self._port, self._addon)
+        master = build_master(self._port, self._addon, self._upstream)
         self._master = master
         loop = master.event_loop
 
