@@ -93,16 +93,17 @@ def _default_proxy_factory(port: int, addon: object | None) -> ProxyHandle:
     return RealProxyHandle(port, addon)
 
 
-def _default_spawn(args: list[str], env: dict[str, str]) -> int:
-    completed = subprocess.run(["claude", *args], env=env)
+def _default_spawn(claude_bin: str, args: list[str], env: dict[str, str]) -> int:
+    completed = subprocess.run([claude_bin, *args], env=env)
     return completed.returncode
 
 
 def run_launcher(
     config: Config,
     claude_args: list[str],
+    claude_bin: str = "claude",
     proxy_factory: Callable[[int, object | None], ProxyHandle] = _default_proxy_factory,
-    spawn: Callable[[list[str], dict[str, str]], int] = _default_spawn,
+    spawn: Callable[[str, list[str], dict[str, str]], int] = _default_spawn,
 ) -> int:
     """Run Claude Code behind the warming proxy.
 
@@ -113,10 +114,12 @@ def run_launcher(
     Args:
         config: Resolved launcher configuration.
         claude_args: Extra arguments passed through to `claude`.
+        claude_bin: Name or path of the `claude` executable to launch; looked
+            up on PATH when it is a bare name.
         proxy_factory: Factory building a ProxyHandle from port and addon;
             injectable for testing.
-        spawn: Callable that runs `claude` and returns its exit code;
-            injectable for testing.
+        spawn: Callable that runs the claude binary and returns its exit
+            code; injectable for testing.
 
     Returns:
         The child process's exit code.
@@ -129,6 +132,6 @@ def run_launcher(
     proxy.start()
     try:
         env = child_env(os.environ, port)
-        return spawn(claude_args, env)
+        return spawn(claude_bin, claude_args, env)
     finally:
         proxy.stop()
