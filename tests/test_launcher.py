@@ -40,7 +40,8 @@ def test_run_launcher_injects_env_and_tears_down() -> None:
         handles.append(handle)
         return handle
 
-    def fake_spawn(args: list[str], env: dict[str, str]) -> int:
+    def fake_spawn(claude_bin: str, args: list[str], env: dict[str, str]) -> int:
+        captured["claude_bin"] = claude_bin
         captured["args"] = args
         captured["env"] = env
         return 7
@@ -49,11 +50,13 @@ def test_run_launcher_injects_env_and_tears_down() -> None:
     exit_code = run_launcher(
         config,
         ["chat", "-p", "hi"],
+        claude_bin="/custom/claude",
         proxy_factory=fake_proxy_factory,
         spawn=fake_spawn,
     )
 
     assert exit_code == 7
+    assert captured["claude_bin"] == "/custom/claude"
     assert captured["args"] == ["chat", "-p", "hi"]
     handle = handles[0]
     assert captured["env"]["ANTHROPIC_BASE_URL"] == f"http://127.0.0.1:{handle.port}"
@@ -67,7 +70,7 @@ def test_run_launcher_stops_proxy_on_child_error() -> None:
     def fake_proxy_factory(port: int, addon: object | None) -> _FakeProxyHandle:
         return handle
 
-    def fake_spawn(args: list[str], env: dict[str, str]) -> Never:
+    def fake_spawn(claude_bin: str, args: list[str], env: dict[str, str]) -> Never:
         raise RuntimeError("boom")
 
     config = Config()

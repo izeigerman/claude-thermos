@@ -107,19 +107,28 @@ def main() -> None:
     context_settings={"ignore_unknown_options": True, "help_option_names": ["-h", "--help"]}
 )
 @_warmer_options
+@click.option(
+    "--bin",
+    "claude_bin",
+    default="claude",
+    show_default=True,
+    envvar="CLAUDE_THERMOS_BIN",
+    help="Name or path of the `claude` executable to launch; a bare name is looked up on PATH.",
+)
 @click.argument("claude_args", nargs=-1, type=click.UNPROCESSED)
 def launch(
     idle_threshold_sec: int,
     warm_interval_sec: int,
     max_cycles_raw: str,
     subagent_active_window_sec: int,
+    claude_bin: str,
     claude_args: tuple[str, ...],
 ) -> None:
     """Launch Claude Code behind the warming proxy (the default action)."""
     config = _build(
         idle_threshold_sec, warm_interval_sec, max_cycles_raw, subagent_active_window_sec
     )
-    sys.exit(run_launcher(config, list(claude_args)))
+    sys.exit(run_launcher(config, list(claude_args), claude_bin=claude_bin))
 
 
 @main.command(context_settings={"help_option_names": ["-h", "--help"]})

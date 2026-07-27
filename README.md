@@ -24,6 +24,23 @@ Tuning (all optional):
 | `--max-cycles`      | `4`     | Max warms per idle episode (`auto` for unlimited)           |
 | `--subagent-window` | `540`   | Seconds a subagent counts as "still active"                 |
 
+### Choosing which `claude` to run
+
+By default `claude-thermos` launches the `claude` found on your `PATH`. Point
+it at a different binary with `--bin`, or the `CLAUDE_THERMOS_BIN` environment
+variable. A bare name is looked up on `PATH` (so `--bin claude-nightly`
+works); a full path is used as-is. This is handy for a vendored build or a
+wrapper that exports a different `CLAUDE_CONFIG_DIR` per account.
+
+```bash
+claude-thermos --bin /path/to/bin/claude -p "fix the bug"
+# or
+export CLAUDE_THERMOS_BIN=/path/to/bin/claude
+claude-thermos -p "fix the bug"
+```
+
+The flag must come before any passthrough `claude` args.
+
 ## Daemon mode (shared proxy for the IDE and multiple terminals)
 
 The default command warms only the `claude` process it launches. Clients that

@@ -19,9 +19,10 @@ def test_bad_max_cycles_reports_error() -> None:
 def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = {}
 
-    def recorder(config: Config, claude_args: list[str]) -> int:
+    def recorder(config: Config, claude_args: list[str], claude_bin: str = "claude") -> int:
         captured["config"] = config
         captured["claude_args"] = claude_args
+        captured["claude_bin"] = claude_bin
         return 0
 
     monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
@@ -37,6 +38,7 @@ def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) ->
     assert captured["config"].warm_interval_sec == 999
     assert captured["config"].subagent_active_window_sec == 540
     assert captured["claude_args"] == ["chat", "-p", "hi"]
+    assert captured["claude_bin"] == "claude"
 
     result = CliRunner().invoke(main, [], env={"CLAUDE_THERMOS_IDLE_THRESHOLD_SEC": "300"})
 
@@ -47,7 +49,7 @@ def test_flag_env_precedence_and_passthrough(monkeypatch: pytest.MonkeyPatch) ->
 def test_passthrough_without_double_dash(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = {}
 
-    def recorder(config: Config, claude_args: list[str]) -> int:
+    def recorder(config: Config, claude_args: list[str], claude_bin: str = "claude") -> int:
         captured["config"] = config
         captured["claude_args"] = claude_args
         return 0
@@ -59,6 +61,38 @@ def test_passthrough_without_double_dash(monkeypatch: pytest.MonkeyPatch) -> Non
     assert result.exit_code == 0
     assert captured["claude_args"] == ["chat", "-p", "hi"]
     assert captured["config"].idle_threshold_sec == 270
+
+
+def test_claude_bin_flag_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = {}
+
+    def recorder(config: Config, claude_args: list[str], claude_bin: str = "claude") -> int:
+        captured["claude_bin"] = claude_bin
+        captured["claude_args"] = claude_args
+        return 0
+
+    monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
+
+    result = CliRunner().invoke(main, ["--bin", "/path/to/claude-account1", "chat"])
+
+    assert result.exit_code == 0
+    assert captured["claude_bin"] == "/path/to/claude-account1"
+    assert captured["claude_args"] == ["chat"]
+
+
+def test_claude_bin_envvar(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = {}
+
+    def recorder(config: Config, claude_args: list[str], claude_bin: str = "claude") -> int:
+        captured["claude_bin"] = claude_bin
+        return 0
+
+    monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
+
+    result = CliRunner().invoke(main, ["chat"], env={"CLAUDE_THERMOS_BIN": "/opt/claude"})
+
+    assert result.exit_code == 0
+    assert captured["claude_bin"] == "/opt/claude"
 
 
 def test_serve_dispatches_to_run_server(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -102,7 +136,7 @@ def test_serve_is_not_swallowed_by_passthrough(monkeypatch: pytest.MonkeyPatch) 
     """The literal first token `serve` must select the daemon, not claude."""
     monkeypatch.setattr(
         "claude_thermos.cli.run_launcher",
-        lambda config, args: pytest.fail("serve routed to launcher"),
+        lambda config, args, claude_bin="claude": pytest.fail("serve routed to launcher"),
     )
     monkeypatch.setattr("claude_thermos.cli.run_server", lambda config, port, upstream: 0)
 
