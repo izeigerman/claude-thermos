@@ -73,7 +73,7 @@ def test_claude_bin_flag_overrides_default(monkeypatch: pytest.MonkeyPatch) -> N
 
     monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
 
-    result = CliRunner().invoke(main, ["--claude", "/path/to/claude-account1", "chat"])
+    result = CliRunner().invoke(main, ["--bin", "/path/to/claude-account1", "chat"])
 
     assert result.exit_code == 0
     assert captured["claude_bin"] == "/path/to/claude-account1"
@@ -89,7 +89,7 @@ def test_claude_bin_envvar(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr("claude_thermos.cli.run_launcher", recorder)
 
-    result = CliRunner().invoke(main, ["chat"], env={"CLAUDE_THERMOS_CLAUDE": "/opt/claude"})
+    result = CliRunner().invoke(main, ["chat"], env={"CLAUDE_THERMOS_BIN": "/opt/claude"})
 
     assert result.exit_code == 0
     assert captured["claude_bin"] == "/opt/claude"

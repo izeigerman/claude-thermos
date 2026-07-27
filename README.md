@@ -28,17 +28,17 @@ Tuning (all optional):
 
 By default `claude-thermos` launches the `claude` found on your `PATH`. Point
 it at a different binary — a vendored build, or a wrapper that exports a
-different `CLAUDE_CONFIG_DIR` per account — with `--claude`, or the
-`CLAUDE_THERMOS_CLAUDE` environment variable:
+different `CLAUDE_CONFIG_DIR` per account — with `--bin`, or the
+`CLAUDE_THERMOS_BIN` environment variable:
 
 ```bash
-claude-thermos --claude /path/to/bin/claude -p "fix the bug"
+claude-thermos --bin /path/to/bin/claude -p "fix the bug"
 # or
-export CLAUDE_THERMOS_CLAUDE=/path/to/bin/claude
+export CLAUDE_THERMOS_BIN=/path/to/bin/claude
 claude-thermos -p "fix the bug"
 ```
 
-A bare name is still looked up on `PATH`, so `--claude claude-nightly` works
+A bare name is still looked up on `PATH`, so `--bin claude-nightly` works
 too. The flag must come before any passthrough `claude` args.
 
 ## Daemon mode (shared proxy for the IDE and multiple terminals)

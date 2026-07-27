@@ -108,11 +108,11 @@ def main() -> None:
 )
 @_warmer_options
 @click.option(
-    "--claude",
+    "--bin",
     "claude_bin",
     default="claude",
     show_default=True,
-    envvar="CLAUDE_THERMOS_CLAUDE",
+    envvar="CLAUDE_THERMOS_BIN",
     help="Name or path of the `claude` executable to launch; a bare name is looked up on PATH.",
 )
 @click.argument("claude_args", nargs=-1, type=click.UNPROCESSED)
