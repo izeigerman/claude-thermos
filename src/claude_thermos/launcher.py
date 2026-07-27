@@ -2,8 +2,8 @@ import asyncio
 import os
 import subprocess
 import threading
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
-from typing import Protocol
 
 from mitmproxy.tools.dump import DumpMaster
 
@@ -11,12 +11,15 @@ from claude_thermos.config import ANTHROPIC_BASE_URL, Config
 from claude_thermos.proxy import WarmerAddon, build_master, find_free_port
 
 
-class ProxyHandle(Protocol):
+class ProxyHandle(ABC):
+    @abstractmethod
     def start(self) -> None: ...
+
+    @abstractmethod
     def stop(self) -> None: ...
 
 
-class RealProxyHandle:
+class RealProxyHandle(ProxyHandle):
     """ProxyHandle backed by mitmproxy's DumpMaster.
 
     `build_master` binds `master.event_loop` to whatever asyncio loop is

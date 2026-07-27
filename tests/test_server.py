@@ -3,10 +3,11 @@ from typing import Never
 import pytest
 
 from claude_thermos.config import Config
+from claude_thermos.launcher import ProxyHandle
 from claude_thermos.server import run_server
 
 
-class _FakeProxyHandle:
+class _FakeProxyHandle(ProxyHandle):
     def __init__(self, port: int, addon: object | None, upstream: str) -> None:
         self.port = port
         self.addon = addon

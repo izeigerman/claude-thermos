@@ -5,7 +5,7 @@ from typing import Never
 import pytest
 
 from claude_thermos.config import Config
-from claude_thermos.launcher import RealProxyHandle, child_env, run_launcher
+from claude_thermos.launcher import ProxyHandle, RealProxyHandle, child_env, run_launcher
 from claude_thermos.proxy import find_free_port
 
 
@@ -18,7 +18,7 @@ def test_child_env_sets_base_url() -> None:
     assert base_env == {"PATH": "/usr/bin"}
 
 
-class _FakeProxyHandle:
+class _FakeProxyHandle(ProxyHandle):
     def __init__(self, port: int) -> None:
         self.port = port
         self.start_calls = 0
